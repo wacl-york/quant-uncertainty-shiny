@@ -11,6 +11,7 @@ all_devices <- c(
     "AQM389",
     "AQM390",
     "AQM391",
+    "AQY872",
     "AQY873A",
     "AQY874",
     "AQY875A2",
@@ -56,6 +57,11 @@ ui <- dashboardPage(
                          "Location",
                          choices=c("Manchester", "London", "York"),
                          selected="Manchester"),
+            sliderInput("avg",
+                         "Minute average",
+                         value=1,
+                         min=1,
+                         max=60),
             numericInput("max_reu",
                          "Maximum REU to display",
                          value=200,
@@ -108,17 +114,24 @@ server <- function(input, output) {
     selected_data <- eventReactive(input$plot_button, {
         start_time <- as.numeric(as_datetime(as_date(input$daterange[1])))
         end_time <- as.numeric(as_datetime(as_date(input$daterange[2] + 1)))
+        avg_str <- sprintf("%d mins", input$avg)
+        print(avg_str)
         
         lcs %>%
             filter(variable == !!input$species,
-                   location == !!input$location,
                    device %in% !!input$devices,
                    timestamp >= start_time,
                    timestamp < end_time) %>%
+            inner_join(deployments, by="device") %>%
+            filter(timestamp >= start, timestamp <= end) %>%
             inner_join(ref, by=c("timestamp", "location", "variable")) %>%
-            mutate(residual = reference - lcs) %>%
             collect() %>%
-            mutate(timestamp = as_datetime(timestamp))
+            mutate(timestamp = floor_date(as_datetime(timestamp), avg_str)) %>%
+            group_by(timestamp, location, manufacturer, device) %>%
+            summarise(lcs = mean(lcs, na.rm=T),
+                      reference = mean(reference, na.rm=T)) %>%
+            mutate(residual = reference - lcs) %>%
+            ungroup()
     })
 
     output$reu_plot <- renderPlot({
@@ -128,11 +141,12 @@ server <- function(input, output) {
             mutate(reu = reus[["u_lcs"]]) %>%
             filter(reu < input$max_reu) %>%
             ggplot(aes(x=reference, y=reu)) +
-                geom_hex(na.rm=T) +
+                geom_point(na.rm=T) +
                 stat_smooth(method="gam", formula=y ~ s(x, bs="cs")) +
                 theme_bw() +
                 labs(x="Reference (ppb)", y="REU (GDE)") +
-                facet_wrap(~device, scales="free")
+                facet_wrap(~device, scales="free") +
+                ylim(0, 200)
     })
     
     output$residual_plot <- renderPlot({
