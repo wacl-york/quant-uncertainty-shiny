@@ -62,6 +62,7 @@ ui <- dashboardPage(
                          value=1,
                          min=1,
                          max=60),
+            checkboxInput("calibrate", "Recalibrate"),
             numericInput("max_reu",
                          "Maximum REU to display",
                          value=200,
@@ -115,9 +116,8 @@ server <- function(input, output) {
         start_time <- as.numeric(as_datetime(as_date(input$daterange[1])))
         end_time <- as.numeric(as_datetime(as_date(input$daterange[2] + 1)))
         avg_str <- sprintf("%d mins", input$avg)
-        print(avg_str)
         
-        lcs %>%
+        df <- lcs %>%
             filter(variable == !!input$species,
                    device %in% !!input$devices,
                    timestamp >= start_time,
@@ -132,6 +132,16 @@ server <- function(input, output) {
                       reference = mean(reference, na.rm=T)) %>%
             mutate(residual = reference - lcs) %>%
             ungroup()
+        
+        if (input$calibrate) {
+            print("Recalibrating")
+            df <- df %>%
+                      group_by(location, manufacturer, device) %>%
+                      mutate(lcs = lm(formula=reference ~ lcs)$fitted.values,
+                             residual = reference - lcs) %>%
+                      ungroup()
+        }
+        df
     })
 
     output$reu_plot <- renderPlot({
@@ -146,7 +156,7 @@ server <- function(input, output) {
                 theme_bw() +
                 labs(x="Reference (ppb)", y="REU (GDE)") +
                 facet_wrap(~device, scales="free") +
-                ylim(0, 200)
+                ylim(0, input$max_reu)
     })
     
     output$residual_plot <- renderPlot({
