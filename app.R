@@ -5,6 +5,7 @@ library(tidyverse)
 library(lubridate)
 library(shinydashboard)
 library(shinycssloaders)
+source("reu.R")
 
 all_devices <- c(
     "AQM388",
@@ -101,10 +102,6 @@ ui <- dashboardPage(
     )
 )
 
-reticulate::use_condaenv("datascience")
-REU_mod <- reticulate::import("REU_Global_func")
-REU <- REU_mod$REU
-
 server <- function(input, output) {
     
     con <- dbConnect(RSQLite::SQLite(), "quant.db")
@@ -145,10 +142,10 @@ server <- function(input, output) {
     })
 
     output$reu_plot <- renderPlot({
-        reus <- REU(selected_data() %>% select(lcs, reference), "reference", Approach="GDE")
+        reu <- reu_gde(x=selected_data()$reference, y=selected_data()$lcs, Approach="GDE")
         
         selected_data() %>%
-            mutate(reu = reus[["u_lcs"]]) %>%
+            mutate(reu = reu) %>%
             filter(reu < input$max_reu) %>%
             ggplot(aes(x=reference, y=reu)) +
                 geom_point(na.rm=T) +
@@ -185,6 +182,7 @@ server <- function(input, output) {
                 geom_tile(na.rm=T) +
                 theme_bw() +
                 labs(x="", y="") +
+                scale_x_date() +
                 scale_fill_discrete("") +
                 theme(legend.position="bottom")
     })
