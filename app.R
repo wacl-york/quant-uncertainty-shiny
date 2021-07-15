@@ -7,6 +7,8 @@ library(shinydashboard)
 library(shinycssloaders)
 source("reu.R")
 
+DB_FN <- "/mnt/shiny/quant_us/quant.db"
+
 all_devices <- c(
     "AQM388",
     "AQM389",
@@ -104,7 +106,7 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
     
-    con <- dbConnect(RSQLite::SQLite(), "quant.db")
+    con <- dbConnect(RSQLite::SQLite(), DB_FN)
     lcs <- tbl(con, "lcs")
     ref <- tbl(con, "reference")
     deployments <- tbl(con, "deployments")
