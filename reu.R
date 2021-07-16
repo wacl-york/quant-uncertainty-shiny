@@ -2,10 +2,6 @@ reu_gde <- function(x, y, Lambda = 1, u_xi = 0.0, Approach = 'GDE') {
     #NOTE: Sigma_err_x (NILU notation) is the same as u_xi (GDE2010 notation)
     Sigma_err_x = u_xi
     
-    # Removing NaNs
-    mask = !is.na(x) & !is.na(y)
-    #x = x[mask]
-    #y = y[mask]
     n = length(x)
     #Means
     x_mean = mean(x, na.rm=T)
