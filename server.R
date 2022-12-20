@@ -1,51 +1,26 @@
 library(DBI)
-library(odbc)
 library(knitr)
 library(kableExtra)
-library(RSQLite)
+library(RPostgres)
 library(shiny)
 library(tidyverse)
 library(lubridate)
 library(ggpubr)
+library(jsonlite)
 
 MEASURANDS <- c("NO2", "O3", "PM2.5")
 STUDY_START <- as_date("2019-12-10")
 STUDY_END <- as_date("2022-10-31")
-
-#sidebar <- dashboardSidebar(
-#    sidebarMenu(
-#        #menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
-#        #menuItem("Widgets", icon = icon("th"), tabName = "widgets",
-#        #         badgeLabel = "new", badgeColor = "green")
-#                 menuItem("About", tabname="about", icon=icon("house")),
-#                 menuItem("Devices", tabname="devices", icon=icon("microscope")),
-#                 menuItem("Evaluation", tabname="evaluation", icon=icon("chart-simple")),
-#                 menuItem("Diagnostics", tabname="diagnostics", icon=icon("wrench"))
-#    )
-#)
-#
-#body <- dashboardBody(
-#    tabItems(
-#        tabItem(tabName = "dashboard",
-#                h2("Dashboard tab content")
-#        ),
-#        
-#        tabItem(tabName = "widgets",
-#                h2("Widgets tab content")
-#        )
-#    )
-#)
-#
-## Put them together into a dashboardPage
-#ui <- dashboardPage(
-#    dashboardHeader(title = "Simple tabs"),
-#    sidebar,
-#    body
-#)
+CREDS <- fromJSON("creds.json")
 
 server <- function(input, output) {
     
-    con <- dbConnect(odbc(), "QUANT")  # TODO update to use credentials file
+    con <- dbConnect(Postgres(),
+                     dbname=CREDS$db,
+                     host=CREDS$host,
+                     port=CREDS$port,
+                     user=CREDS$username,
+                     password=CREDS$password)
     instruments <- tbl(con, "lcsinstrument") |> 
                     filter(study == "QUANT")
     #lcs <- tbl(con, "lcs")
