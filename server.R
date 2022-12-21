@@ -74,7 +74,8 @@ server <- function(session, input, output) {
                             "Sensor number", choices=c(1)),
                 actionButton(sprintf("plot_%d", i),
                              "Plot"),
-                # TODO add option to download data
+                hidden(downloadButton(sprintf("download_%d", i),
+                             "Download data")),
                 width=3,
                 solidHeader = TRUE,
                 status="success"
@@ -116,6 +117,8 @@ server <- function(session, input, output) {
                 input[[sprintf("sensornumber_%d", i)]],
                 input[[sprintf("cal_%d", i)]]
             )
+
+            shinyjs::showElement(id=sprintf("download_%d", i))
         }, ignoreInit = TRUE)
     }
     
@@ -185,7 +188,34 @@ server <- function(session, input, output) {
             updateSelectInput(session, sprintf("sensornumber_%d", i), choices=sensors)
             updateSelectInput(session, sprintf("cal_%d", i), choices=cals)
         })
-        
+    }
+
+    create_download_handler <- function(i) {
+        output[[sprintf("download_%d", i)]] <- downloadHandler(
+            filename = function() {
+                paste0(
+                    paste(
+                        "quant",
+                        input[[sprintf("instrument_select_%d", i)]],
+                        input$measurand,
+                        input[[sprintf("date_%d", i)]][1],
+                        input[[sprintf("date_%d", i)]][2],
+                        input[[sprintf("cal_%d", i)]],
+                        input[[sprintf("sensornumber_%d", i)]],
+                        sep="_"
+                    ),
+                    ".csv"
+                )
+            },
+            content = function(con) {
+                lcs_col <- sprintf("%s_lcs", input$measurand)
+                ref_col <- sprintf("%s_reference", input$measurand)
+                df <- dfs[[sprintf("df_%d", i)]] |> select(-measurand)
+                colnames(df)[colnames(df) == 'lcs'] <- lcs_col
+                colnames(df)[colnames(df) == 'ref'] <- ref_col
+                write.csv(df, con, row.names = FALSE, quote = FALSE)
+            }
+        )
     }
     ############################ End functions to dynamically create plots
 
@@ -293,6 +323,7 @@ server <- function(session, input, output) {
     })
     create_plot_listener(1)
     create_evaluation_plot_renders(1)
+    create_download_handler(1)
     create_update_selection_listeners(1)
     
     ########################### Listeners to add/remove instrument boxes
@@ -307,6 +338,7 @@ server <- function(session, input, output) {
                  )
         create_plot_listener(n_comparisons)
         create_evaluation_plot_renders(n_comparisons)
+        create_download_handler(n_comparisons)
         create_update_selection_listeners(n_comparisons)
         
         if (n_comparisons == MAX_COMPARISONS) disable("add_comparison")
