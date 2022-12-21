@@ -9,6 +9,8 @@ library(lubridate)
 library(jsonlite)
 library(quantr)
 
+options(dplyr.summarise.inform=FALSE)
+
 MEASURANDS <- c("NO2", "O3", "PM2.5")
 STUDY_START <- as_date("2019-12-10")
 STUDY_END <- as_date("2022-10-31")
@@ -149,7 +151,7 @@ server <- function(session, input, output) {
                      "No datapoints found, check selection criteria."
                  )
             )
-            plot_scatter(df, lcs_column="lcs", reference_column="ref") + coord_cartesian()
+            suppressMessages(plot_scatter(df, lcs_column="lcs", reference_column="ref") + coord_cartesian())
         })
         
         # Bland-Altman
