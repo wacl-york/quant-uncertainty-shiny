@@ -60,16 +60,16 @@ ui <- dashboardPage(
                             width=12
                         ),
                         box(
-                            title="Available sensors",
+                            title="Calibration versions",
                             withSpinner(
-                                htmlOutput("sensor_availability")
+                                plotOutput("cal_versions")
                             ),
                             width=12
                         ),
                         box(
-                            title="Calibration versions",
+                            title="Available sensors",
                             withSpinner(
-                                plotOutput("cal_versions")
+                                htmlOutput("sensor_availability")
                             ),
                             width=12
                         )

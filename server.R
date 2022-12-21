@@ -227,12 +227,12 @@ server <- function(session, input, output) {
             collect() |>
             mutate(
                    range = as.integer(difftime(finish, start, units="days")),
-                   midpoint = as_date(start) + floor((range)/2),
-                   instrument=as.factor(instrument)
+                   midpoint = as_date(start) + floor((range)/2)
             )
-        instrument_ids <- rev(levels(df$instrument))
+        instruments_descending <- str_sort(unique(df$instrument), numeric=TRUE, decreasing=TRUE)
         df %>%
-            ggplot(aes(x=midpoint, y=as.numeric(instrument), fill=location, width=range)) +
+            mutate(instrument = factor(instrument, levels=instruments_descending)) |>
+            ggplot(aes(x=midpoint, y=instrument, fill=location, width=range)) +
                 geom_tile(na.rm=T) +
                 theme_bw() +
                 labs(x="", y="") +
@@ -240,10 +240,10 @@ server <- function(session, input, output) {
                              date_labels = "%b %y") +
                 theme(panel.grid.major.x = element_blank(),
                       panel.grid.minor.x = element_blank(),
-                      panel.grid.minor.y = element_blank()) +
-                scale_y_continuous(breaks = 1:length(instrument_ids),
-                                   labels = instrument_ids,
-                                   sec.axis = dup_axis()) +
+                      panel.grid.minor.y = element_blank(),
+                      legend.text = element_text(size=10),
+                      axis.text.x = element_text(size=10),
+                      axis.text.y = element_text(size=9)) +
                 scale_fill_discrete("") +
                 theme(legend.position="bottom")
     })
@@ -262,12 +262,18 @@ server <- function(session, input, output) {
             mutate(sensornumber = ifelse(is.na(sensornumber), 0, sensornumber)) |>
             pivot_wider(names_from=measurand,
                         values_from=sensornumber,
-                        values_fn=sum) |>
+                        values_fn=function(x) sum(x > 0)) |>
             rename(Instrument = instrument) |>
             mutate(across(-Instrument,
                    function(x) ifelse(x == 0, 'X', 
                                       ifelse(x == 1, '✓', x))))
-            
+
+        # Reorder both alphabetically and numerically (i.e. PA10 comes after PA2)
+        instrument_order <- str_sort(unique(df$Instrument), numeric=TRUE)
+        df <- df |>
+            mutate(Instrument = factor(Instrument, levels=instrument_order)) |>
+            arrange(Instrument)
+
         tab <- df |>
             kable(align=c("l", rep("c", length(MEASURANDS)))) |>
             kable_styling(c("striped", "hover")) 
@@ -298,24 +304,39 @@ server <- function(session, input, output) {
             summarise(calibrationname = paste(calibrationname, collapse=' + ')) |>
             ungroup() |>
             group_by(company, measurand) |>
-            mutate(duration = as.numeric(difftime(lead(dateapplied, 1), dateapplied, units="days")),
-                   duration = ifelse(is.na(duration),
-                                     as.numeric(difftime(STUDY_END, dateapplied, units="days")),
-                                     duration),
-                   midpoint = dateapplied + (duration / 2)) |>
+            mutate(
+                end=lead(dateapplied, 1),
+                end= as_date(ifelse(is.na(end), STUDY_END, end)),
+                duration = as.numeric(difftime(end, dateapplied, units="days")),
+                midpoint = dateapplied + (duration / 2)
+            ) |>
             ungroup()
+
+        measurands_reversed <- str_sort(MEASURANDS, numeric=TRUE, decreasing=TRUE)
         
         df |>
-            ggplot(aes(y=measurand)) +
-                geom_tile(aes(x=dateapplied),
-                          linewidth=2) +
-                geom_text(aes(x=midpoint, label=calibrationname),
-                          size=3) +
+            mutate(measurand = factor(measurand, levels=measurands_reversed)) |>
+            ggplot() +
+                geom_segment(aes(x=dateapplied,
+                                 xend=end,
+                                 y=measurand,
+                                 yend=measurand,
+                                 group=as.factor(calibrationname),
+                                 colour=as.factor(calibrationname)),
+                             alpha=0.5,
+                             linewidth=5) +
+                geom_text(aes(x=midpoint, y=measurand, label=calibrationname),
+                          size=4) +
                 facet_wrap(~company, ncol=1,
                            scales="free_y") +
                 xlim(c(STUDY_START-10, STUDY_END)) +
                 labs(x="", y="") +
-                theme_bw()
+                guides(colour="none") +
+                theme_bw() +
+                theme(
+                    axis.text = element_text(size=10),
+                    strip.text = element_text(size=12)
+                )
     })
     
     
