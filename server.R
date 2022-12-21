@@ -6,7 +6,6 @@ library(shiny)
 library(shinyjs)
 library(tidyverse)
 library(lubridate)
-library(ggpubr)
 library(jsonlite)
 library(quantr)
 
@@ -38,7 +37,7 @@ download_data <- function(con, in_instrument, in_pollutant, in_start, in_end, in
 
 ########################################
 
-server <- function(input, output) {
+server <- function(session, input, output) {
     
     con <- dbConnect(Postgres(),
                      dbname=CREDS$db,
@@ -59,10 +58,20 @@ server <- function(input, output) {
             fluidRow(
             box(
                 title="Controls",
-                # TODO Add time range, calibration, sensor number
-                selectInput(sprintf("instrument_select_%d", i), 
+                selectInput(sprintf("instrument_select_%d", i),
                             "Select instrument",
                             choices=instrument_names),
+                shiny::dateRangeInput(sprintf("date_%d", i),
+                                      "Time-range",
+                                      start=STUDY_START,
+                                      end=STUDY_END,
+                                      min=STUDY_START,
+                                      max=STUDY_END),
+                selectInput(sprintf("cal_%d", i),
+                                    "Calibration version",
+                                    choices=c("out-of-box")),
+                selectInput(sprintf("sensornumber_%d", i),
+                            "Sensor number", choices=c(1)),
                 actionButton(sprintf("plot_%d", i),
                              "Plot"),
                 # TODO add option to download data
@@ -97,15 +106,15 @@ server <- function(input, output) {
 
     create_plot_listener <- function(i) {
         observeEvent(input[[sprintf("plot_%d", i)]], {
+            dates <- input[[sprintf("date_%d", i)]]
             dfs[[sprintf("df_%d", i)]] <- download_data(
                 con,
                 input[[sprintf("instrument_select_%d", i)]],
-                # TODO have these values be user selectable
                 input$measurand,
-                "2022-01-01",
-                "2022-01-31",
-                "1",
-                "cal2"
+                dates[1],
+                dates[2],
+                input[[sprintf("sensornumber_%d", i)]],
+                input[[sprintf("cal_%d", i)]]
             )
         }, ignoreInit = TRUE)
     }
@@ -151,6 +160,32 @@ server <- function(input, output) {
             )
             plot_bland_altman(df, lcs_column="lcs", reference_column="ref")
         })
+    }
+    
+    create_update_selection_listeners <- function(i) {
+        observeEvent(input[[sprintf("instrument_select_%d", i)]], {
+            # Find sensornumbers and calibrationnames for this instrument
+            inst <- input[[sprintf("instrument_select_%d", i)]]
+            sensors <- tbl(con, "sensor") |>
+                filter(instrument == inst,
+                       measurand == local(input$measurand)) |>
+                distinct(sensornumber) |>
+                collect() |>
+                pull(sensornumber)
+            cals <- tbl(con, "sensorcalibration") |>
+                filter(instrument == inst,
+                       measurand == local(input$measurand),
+                       calibrationname != 'Rescraped') |>
+                arrange(dateapplied, calibrationname) |>
+                collect() |>
+                distinct(calibrationname) |>
+                pull(calibrationname)
+            
+            # Update UI choices
+            updateSelectInput(session, sprintf("sensornumber_%d", i), choices=sensors)
+            updateSelectInput(session, sprintf("cal_%d", i), choices=cals)
+        })
+        
     }
     ############################ End functions to dynamically create plots
 
@@ -258,6 +293,7 @@ server <- function(input, output) {
     })
     create_plot_listener(1)
     create_evaluation_plot_renders(1)
+    create_update_selection_listeners(1)
     
     ########################### Listeners to add/remove instrument boxes
     observeEvent(input$add_comparison, {
@@ -271,6 +307,7 @@ server <- function(input, output) {
                  )
         create_plot_listener(n_comparisons)
         create_evaluation_plot_renders(n_comparisons)
+        create_update_selection_listeners(n_comparisons)
         
         if (n_comparisons == MAX_COMPARISONS) disable("add_comparison")
         if (n_comparisons == 2) enable("remove_comparison")
