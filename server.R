@@ -310,13 +310,30 @@ server <- function(session, input, output) {
         create_update_selection_listeners(n_comparisons)
         
         if (n_comparisons == MAX_COMPARISONS) disable("add_comparison")
-        if (n_comparisons == 2) enable("remove_comparison")
+        if (n_comparisons == 2) {
+            enable("remove_comparison")
+            enable("remove_all_comparison")
+        }
     })
     
     observeEvent(input$remove_comparison, {
         removeUI(sprintf("#row_%d", n_comparisons))
         n_comparisons <<- n_comparisons - 1
-        if (n_comparisons == 1) disable("remove_comparison")
+        if (n_comparisons == 1) {
+            enable("add_comparison")
+            disable("remove_comparison")
+            disable("remove_all_comparison")
+        }
+    })
+    
+    observeEvent(input$remove_all_comparison, {
+        for (i in 2:n_comparisons) {
+            removeUI(sprintf("#row_%d", i))
+        }
+        n_comparisons <<- 1
+        disable("remove_comparison")
+        disable("remove_all_comparison")
+        enable("add_comparison")
     })
     ########################### End listeners to add/remove instrument boxes
     

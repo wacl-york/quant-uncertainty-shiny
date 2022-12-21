@@ -81,6 +81,7 @@ ui <- dashboardPage(
                         # TODO clean up into a single row
                         actionButton("add_comparison", "Add device"),
                         disabled(actionButton("remove_comparison", "Remove device")),
+                        disabled(actionButton("remove_all_comparison", "Remove all devices")),
                         uiOutput("measurand_selection")
                     ),
                     br(),
