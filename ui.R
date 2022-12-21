@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyjs)
 library(shinydashboard)
 library(shinycssloaders)
 
@@ -42,6 +43,7 @@ ui <- dashboardPage(
             #downloadButton("download_button", "Download displayed data")
     ),
     dashboardBody(
+        useShinyjs(),
         tabItems(
             tabItem(tabName="about",
                     h1("QUANT"),
@@ -74,12 +76,18 @@ ui <- dashboardPage(
                     )
             ),
             tabItem(tabName="evaluation",
-                    h2("Evaluation"),
-                    p("Scatter/REU/BA")
+                    h2("Compare devices"),
+                    fluidRow(
+                        # TODO clean up into a single row
+                        actionButton("add_comparison", "Add device"),
+                        disabled(actionButton("remove_comparison", "Remove device")),
+                        uiOutput("measurand_selection")
+                    ),
+                    br(),
+                    uiOutput("evaluation_content")
             ),
             tabItem(tabName="diagnostics",
                     h2("Diagnostics"),
-                    p("Error vs time etc...")
             )
         )
         #fluidRow(
