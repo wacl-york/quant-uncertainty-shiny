@@ -80,6 +80,7 @@ ui <- dashboardPage(
                     fluidRow(
                         # TODO clean up into a single row
                         actionButton("add_comparison", "Add device"),
+                        actionButton("copy_comparison", "Copy last device"),
                         disabled(actionButton("remove_comparison", "Remove device")),
                         disabled(actionButton("remove_all_comparison", "Remove all devices")),
                         uiOutput("measurand_selection")

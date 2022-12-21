@@ -9,6 +9,8 @@ library(lubridate)
 library(jsonlite)
 library(quantr)
 
+# TODO when click remove, also remove datasets and reset options
+
 options(dplyr.summarise.inform=FALSE)
 
 MEASURANDS <- c("NO2", "O3", "PM2.5")
@@ -50,6 +52,7 @@ server <- function(session, input, output) {
     instruments <- tbl(con, "lcsinstrument") |> 
                     filter(study == "QUANT")
     instrument_names <- instruments |> select(instrument) |> collect() |> pull(instrument)
+    instrument_names <- str_sort(instrument_names, numeric=TRUE)
     n_comparisons <- 1
     dfs <- reactiveValues()
     
@@ -58,6 +61,7 @@ server <- function(session, input, output) {
     create_evaluation_row <- function(i) {
         div(
             fluidRow(
+            # TODO Make same height
             box(
                 title="Controls",
                 selectInput(sprintf("instrument_select_%d", i),
@@ -364,7 +368,49 @@ server <- function(session, input, output) {
         create_download_handler(n_comparisons)
         create_update_selection_listeners(n_comparisons)
         
-        if (n_comparisons == MAX_COMPARISONS) disable("add_comparison")
+        if (n_comparisons == MAX_COMPARISONS) {
+            disable("add_comparison")
+            disable("copy_comparison")
+        }
+        if (n_comparisons == 2) {
+            enable("remove_comparison")
+            enable("remove_all_comparison")
+        }
+    })
+
+    observeEvent(input$copy_comparison, {
+        n_comparisons <<- n_comparisons + 1
+        # Insert UI and create plot renderers and button listeners
+        new_row <- create_evaluation_row(n_comparisons)
+        insertUI("#evaluation_content",
+                 "beforeEnd",
+                 new_row,
+                 immediate=TRUE
+                 )
+        updateSelectInput(session,
+                          sprintf("instrument_select_%d", n_comparisons),
+                          selected = input[[sprintf("instrument_select_%d", n_comparisons-1)]])
+        updateDateRangeInput(session,
+                             sprintf("date_%d", n_comparisons),
+                             start = input[[sprintf("date_%d", n_comparisons-1)]][1],
+                             end = input[[sprintf("date_%d", n_comparisons-1)]][2]
+                             )
+        updateSelectInput(session,
+                          sprintf("cal_%d", n_comparisons),
+                          selected = input[[sprintf("cal_%d", n_comparisons-1)]])
+        updateSelectInput(session,
+                          sprintf("sensornumber_%d", n_comparisons),
+                          selected = input[[sprintf("sensornumber_%d", n_comparisons-1)]])
+
+        create_plot_listener(n_comparisons)
+        create_evaluation_plot_renders(n_comparisons)
+        create_download_handler(n_comparisons)
+        create_update_selection_listeners(n_comparisons)
+
+        if (n_comparisons == MAX_COMPARISONS) {
+            disable("add_comparison")
+            disable("copy_comparison")
+        }
         if (n_comparisons == 2) {
             enable("remove_comparison")
             enable("remove_all_comparison")
@@ -376,6 +422,7 @@ server <- function(session, input, output) {
         n_comparisons <<- n_comparisons - 1
         if (n_comparisons == 1) {
             enable("add_comparison")
+            enable("copy_comparison")
             disable("remove_comparison")
             disable("remove_all_comparison")
         }
@@ -389,6 +436,7 @@ server <- function(session, input, output) {
         disable("remove_comparison")
         disable("remove_all_comparison")
         enable("add_comparison")
+        enable("copy_comparison")
     })
     ########################### End listeners to add/remove instrument boxes
     
