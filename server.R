@@ -9,8 +9,6 @@ library(lubridate)
 library(jsonlite)
 library(quantr)
 
-# TODO when click remove, also remove datasets and reset options
-
 options(dplyr.summarise.inform=FALSE)
 
 MEASURANDS <- c("NO2", "O3", "PM2.5")
@@ -61,7 +59,6 @@ server <- function(session, input, output) {
     create_evaluation_row <- function(i) {
         div(
             fluidRow(
-            # TODO Make same height
             box(
                 title="Controls",
                 selectInput(sprintf("instrument_select_%d", i),
@@ -78,10 +75,13 @@ server <- function(session, input, output) {
                                     choices=c("out-of-box")),
                 selectInput(sprintf("sensornumber_%d", i),
                             "Sensor number", choices=c(1)),
+                br(),
+                br(),
                 actionButton(sprintf("plot_%d", i),
                              "Plot"),
                 hidden(downloadButton(sprintf("download_%d", i),
                              "Download data")),
+                height=462.5,
                 width=3,
                 solidHeader = TRUE,
                 status="success"
@@ -417,8 +417,13 @@ server <- function(session, input, output) {
         }
     })
     
+    remove_row <- function(i) {
+        removeUI(sprintf("#row_%d", i))
+        dfs[[sprintf("df_%d", i)]] <- NULL
+    }
+
     observeEvent(input$remove_comparison, {
-        removeUI(sprintf("#row_%d", n_comparisons))
+        remove_row(n_comparisons)
         n_comparisons <<- n_comparisons - 1
         if (n_comparisons == 1) {
             enable("add_comparison")
@@ -430,7 +435,7 @@ server <- function(session, input, output) {
     
     observeEvent(input$remove_all_comparison, {
         for (i in 2:n_comparisons) {
-            removeUI(sprintf("#row_%d", i))
+            remove_row(i)
         }
         n_comparisons <<- 1
         disable("remove_comparison")
