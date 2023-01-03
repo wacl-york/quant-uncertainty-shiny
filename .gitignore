@@ -3,5 +3,6 @@
 .RData
 .Ruserdata
 *.db
+*.json
 
 __pycache__
