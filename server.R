@@ -18,27 +18,27 @@ CREDS <- fromJSON("creds.json")
 MAX_COMPARISONS <- 4
 
 download_data <- function(con, in_instrument, in_pollutant, in_avg, in_start, in_end, in_sensornumber, in_cal) {
-    lcs <- tbl(con, "lcs_hourly") |>
+    lcs <- tbl(con, "lcs_hourly") %>%
         filter(instrument == in_instrument,
                measurand == in_pollutant,
                between(time, in_start, in_end),
                sensornumber == in_sensornumber,
                version == in_cal,
-               is.na(flag) | flag != 'Error') |>
+               is.na(flag) | flag != 'Error') %>%
         rename(lcs=measurement)
     # Obtain corresponding reference
-    lcs <- lcs |>
-            inner_join(tbl(con, "ref_hourly") |> select(-version) |> rename(ref=measurement), 
+    lcs <- lcs %>%
+            inner_join(tbl(con, "ref_hourly") %>% select(-version) %>% rename(ref=measurement), 
                        by=c("location", "time", "measurand"))
     if (in_avg == 'Daily') {
-        lcs <- lcs |>
-                mutate(time = floor_date(time, "day")) |>
-                group_by(time, instrument, measurand, sensornumber, version, location) |>
+        lcs <- lcs %>%
+                mutate(time = floor_date(time, "day")) %>%
+                group_by(time, instrument, measurand, sensornumber, version, location) %>%
                 summarise(lcs = mean(lcs, na.rm=T),
-                          ref = mean(ref, na.rm=T)) |>
+                          ref = mean(ref, na.rm=T)) %>%
                 ungroup()
     }
-    lcs |> collect()
+    lcs %>% collect()
 }
 
 
@@ -53,9 +53,9 @@ server <- function(session, input, output) {
                      port=CREDS$port,
                      user=CREDS$username,
                      password=CREDS$password)
-    instruments <- tbl(con, "lcsinstrument") |> 
+    instruments <- tbl(con, "lcsinstrument") %>% 
                     filter(study == "QUANT")
-    instrument_names <- instruments |> select(instrument) |> collect() |> pull(instrument)
+    instrument_names <- instruments %>% select(instrument) %>% collect() %>% pull(instrument)
     instrument_names <- str_sort(instrument_names, numeric=TRUE)
     n_comparisons <- 1
     dfs <- reactiveValues()
@@ -182,19 +182,19 @@ server <- function(session, input, output) {
         observeEvent(input[[sprintf("instrument_select_%d", i)]], {
             # Find sensornumbers and calibrationnames for this instrument
             inst <- input[[sprintf("instrument_select_%d", i)]]
-            sensors <- tbl(con, "sensor") |>
+            sensors <- tbl(con, "sensor") %>%
                 filter(instrument == inst,
-                       measurand == local(input$measurand)) |>
-                distinct(sensornumber) |>
-                collect() |>
+                       measurand == local(input$measurand)) %>%
+                distinct(sensornumber) %>%
+                collect() %>%
                 pull(sensornumber)
-            cals <- tbl(con, "sensorcalibration") |>
+            cals <- tbl(con, "sensorcalibration") %>%
                 filter(instrument == inst,
                        measurand == local(input$measurand),
-                       calibrationname != 'Rescraped') |>
-                arrange(dateapplied, calibrationname) |>
-                collect() |>
-                distinct(calibrationname) |>
+                       calibrationname != 'Rescraped') %>%
+                arrange(dateapplied, calibrationname) %>%
+                collect() %>%
+                distinct(calibrationname) %>%
                 pull(calibrationname)
             
             # Update UI choices
@@ -223,7 +223,7 @@ server <- function(session, input, output) {
             content = function(con) {
                 lcs_col <- sprintf("%s_lcs", input$measurand)
                 ref_col <- sprintf("%s_reference", input$measurand)
-                df <- dfs[[sprintf("df_%d", i)]] |> select(-measurand)
+                df <- dfs[[sprintf("df_%d", i)]] %>% select(-measurand)
                 colnames(df)[colnames(df) == 'lcs'] <- lcs_col
                 colnames(df)[colnames(df) == 'ref'] <- ref_col
                 write.csv(df, con, row.names = FALSE, quote = FALSE)
@@ -233,16 +233,16 @@ server <- function(session, input, output) {
     ############################ End functions to dynamically create plots
 
     output$deployment_plot <- renderPlot({
-        df <- tbl(con, "deployment") |>
-                        inner_join(instruments, by="instrument") |>
-            collect() |>
+        df <- tbl(con, "deployment") %>%
+                        inner_join(instruments, by="instrument") %>%
+            collect() %>%
             mutate(
                    range = as.integer(difftime(finish, start, units="days")),
                    midpoint = as_date(start) + floor((range)/2)
             )
         instruments_descending <- str_sort(unique(df$instrument), numeric=TRUE, decreasing=TRUE)
         df %>%
-            mutate(instrument = factor(instrument, levels=instruments_descending)) |>
+            mutate(instrument = factor(instrument, levels=instruments_descending)) %>%
             ggplot(aes(x=midpoint, y=instrument, fill=location, width=range)) +
                 geom_tile(na.rm=T) +
                 theme_bw() +
@@ -261,35 +261,35 @@ server <- function(session, input, output) {
     
     output$sensor_availability <- renderUI({
         # Obtain which sensors are housed in which instruments
-        df <- tbl(con, "sensor") |>
-                inner_join(instruments, by="instrument") |>
-                filter(measurand %in% MEASURANDS) |>
-                select(instrument, measurand, sensornumber) |>
+        df <- tbl(con, "sensor") %>%
+                inner_join(instruments, by="instrument") %>%
+                filter(measurand %in% MEASURANDS) %>%
+                select(instrument, measurand, sensornumber) %>%
                 collect() 
         # Add missing gaps
         df <- expand_grid(instrument=unique(df$instrument), 
-                    measurand=MEASURANDS) |>
-            left_join(df, by=c("instrument", "measurand")) |>
-            mutate(sensornumber = ifelse(is.na(sensornumber), 0, sensornumber)) |>
+                    measurand=MEASURANDS) %>%
+            left_join(df, by=c("instrument", "measurand")) %>%
+            mutate(sensornumber = ifelse(is.na(sensornumber), 0, sensornumber)) %>%
             pivot_wider(names_from=measurand,
                         values_from=sensornumber,
-                        values_fn=function(x) sum(x > 0)) |>
-            rename(Instrument = instrument) |>
+                        values_fn=function(x) sum(x > 0)) %>%
+            rename(Instrument = instrument) %>%
             mutate(across(-Instrument,
                    function(x) ifelse(x == 0, 'X', 
                                       ifelse(x == 1, '✓', x))))
 
         # Reorder both alphabetically and numerically (i.e. PA10 comes after PA2)
         instrument_order <- str_sort(unique(df$Instrument), numeric=TRUE)
-        df <- df |>
-            mutate(Instrument = factor(Instrument, levels=instrument_order)) |>
+        df <- df %>%
+            mutate(Instrument = factor(Instrument, levels=instrument_order)) %>%
             arrange(Instrument)
 
-        tab <- df |>
-            kable(align=c("l", rep("c", length(MEASURANDS)))) |>
+        tab <- df %>%
+            kable(align=c("l", rep("c", length(MEASURANDS)))) %>%
             kable_styling(c("striped", "hover")) 
         for (i in 2:ncol(df)) {
-            tab <- tab |> 
+            tab <- tab %>% 
                 column_spec(i,
                             background = ifelse(df[[i]] == 'X',
                                                 'salmon',
@@ -299,34 +299,34 @@ server <- function(session, input, output) {
     })
     
     output$cal_versions <- renderPlot({
-        df <- tbl(con, "sensorcalibration") |>
-            inner_join(instruments, by="instrument") |>
+        df <- tbl(con, "sensorcalibration") %>%
+            inner_join(instruments, by="instrument") %>%
             filter(calibrationname != 'Rescraped',
-                   measurand %in% MEASURANDS) |>
-            group_by(company, measurand, calibrationname) |>
-            summarise(dateapplied = min(as_date(dateapplied), na.rm=T)) |>
-            collect() |>
-            ungroup() |>
+                   measurand %in% MEASURANDS) %>%
+            group_by(company, measurand, calibrationname) %>%
+            summarise(dateapplied = min(as_date(dateapplied), na.rm=T)) %>%
+            collect() %>%
+            ungroup() %>%
             arrange(company, dateapplied)
         
-        df <- df |>
+        df <- df %>%
             # It's possible to have simultaneous cals
-            group_by(company, measurand, dateapplied) |>
-            summarise(calibrationname = paste(calibrationname, collapse=' + ')) |>
-            ungroup() |>
-            group_by(company, measurand) |>
+            group_by(company, measurand, dateapplied) %>%
+            summarise(calibrationname = paste(calibrationname, collapse=' + ')) %>%
+            ungroup() %>%
+            group_by(company, measurand) %>%
             mutate(
                 end=lead(dateapplied, 1),
                 end= as_date(ifelse(is.na(end), STUDY_END, end)),
                 duration = as.numeric(difftime(end, dateapplied, units="days")),
                 midpoint = dateapplied + (duration / 2)
-            ) |>
+            ) %>%
             ungroup()
 
         measurands_reversed <- str_sort(MEASURANDS, numeric=TRUE, decreasing=TRUE)
         
-        df |>
-            mutate(measurand = factor(measurand, levels=measurands_reversed)) |>
+        df %>%
+            mutate(measurand = factor(measurand, levels=measurands_reversed)) %>%
             ggplot() +
                 geom_segment(aes(x=dateapplied,
                                  xend=end,
