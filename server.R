@@ -473,8 +473,6 @@ server <- function(session, input, output) {
             input$timeavg
         },
         {
-            if (!measurand_dropdown_created) return()
-
             for (i in seq(N_COMPARISONS)) {
                 dates <- input[[sprintf("date_%d", i)]]
                 dfs[[sprintf("df_%d", i)]] <- download_data(
