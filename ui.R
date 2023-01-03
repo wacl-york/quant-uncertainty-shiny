@@ -83,12 +83,20 @@ ui <- dashboardPage(
                         actionButton("copy_comparison", "Copy last device"),
                         disabled(actionButton("remove_comparison", "Remove device")),
                         disabled(actionButton("remove_all_comparison", "Remove all devices")),
+                        # TODO Add minutely
+                        radioButtons("timeavg", "Time resolution", 
+                                     choices=c("Hourly", "Daily"),
+                                     selected="Hourly",
+                                     inline=TRUE),
                         uiOutput("measurand_selection")
                     ),
                     br(),
                     uiOutput("evaluation_content")
             ),
             tabItem(tabName="diagnostics",
+                    # TODO
+                    # Error vs reference,
+                    # Error vs time
                     h2("Diagnostics"),
             )
         )

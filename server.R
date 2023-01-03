@@ -17,8 +17,7 @@ STUDY_END <- as_date("2022-10-31")
 CREDS <- fromJSON("creds.json")
 MAX_COMPARISONS <- 4
 
-download_data <- function(con, in_instrument, in_pollutant, in_start, in_end, in_sensornumber, in_cal) {
-    # TODO Add option for minutely
+download_data <- function(con, in_instrument, in_pollutant, in_avg, in_start, in_end, in_sensornumber, in_cal) {
     lcs <- tbl(con, "lcs_hourly") |>
         filter(instrument == in_instrument,
                measurand == in_pollutant,
@@ -30,9 +29,16 @@ download_data <- function(con, in_instrument, in_pollutant, in_start, in_end, in
     # Obtain corresponding reference
     lcs <- lcs |>
             inner_join(tbl(con, "ref_hourly") |> select(-version) |> rename(ref=measurement), 
-                       by=c("location", "time", "measurand")) |>
-            collect()
-    lcs
+                       by=c("location", "time", "measurand"))
+    if (in_avg == 'Daily') {
+        lcs <- lcs |>
+                mutate(time = floor_date(time, "day")) |>
+                group_by(time, instrument, measurand, sensornumber, version, location) |>
+                summarise(lcs = mean(lcs, na.rm=T),
+                          ref = mean(ref, na.rm=T)) |>
+                ungroup()
+    }
+    lcs |> collect()
 }
 
 
@@ -118,6 +124,7 @@ server <- function(session, input, output) {
                 con,
                 input[[sprintf("instrument_select_%d", i)]],
                 input$measurand,
+                input$timeavg,
                 dates[1],
                 dates[2],
                 input[[sprintf("sensornumber_%d", i)]],
