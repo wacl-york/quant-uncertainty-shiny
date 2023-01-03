@@ -10,7 +10,15 @@ library(jsonlite)
 library(quantr)
 
 options(dplyr.summarise.inform=FALSE)
-creds_fn <- "/mnt/shiny/quant_us/creds.json"
+# Somewhat hacky way to tell if running hosted, but still the recommended method
+# https://stackoverflow.com/questions/31423144/how-to-know-if-the-app-is-running-at-local-or-on-server-r-shiny
+is_local <- Sys.getenv('SHINY_PORT') == ""
+
+if (is_local) {
+    creds_fn <- 'creds.json'
+} else {
+    creds_fn <- "/mnt/shiny/quant_us/creds.json"
+}
 
 MEASURANDS <- c("NO2", "O3", "PM2.5")
 STUDY_START <- as_date("2019-12-10")
