@@ -10,11 +10,12 @@ library(jsonlite)
 library(quantr)
 
 options(dplyr.summarise.inform=FALSE)
+creds_fn <- "/mnt/shiny/quant_us/creds.json"
 
 MEASURANDS <- c("NO2", "O3", "PM2.5")
 STUDY_START <- as_date("2019-12-10")
 STUDY_END <- as_date("2022-10-31")
-CREDS <- fromJSON("creds.json")
+CREDS <- fromJSON(creds_fn)
 MAX_COMPARISONS <- 4
 
 download_data <- function(con, in_instrument, in_pollutant, in_avg, in_start, in_end, in_sensornumber, in_cal) {
