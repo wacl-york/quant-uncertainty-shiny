@@ -66,7 +66,7 @@ server <- function(session, input, output) {
                     filter(study == "QUANT")
     instrument_names <- instruments %>% select(instrument) %>% collect() %>% pull(instrument)
     instrument_names <- str_sort(instrument_names, numeric=TRUE)
-    n_comparisons <- 1
+    N_COMPARISONS <- 1
     dfs <- reactiveValues()
     
     
@@ -371,63 +371,63 @@ server <- function(session, input, output) {
     
     ########################### Listeners to add/remove instrument boxes
     observeEvent(input$add_comparison, {
-        n_comparisons <<- n_comparisons + 1
+        N_COMPARISONS <<- N_COMPARISONS + 1
         # Insert UI and create plot renderers and button listeners
-        new_row <- create_evaluation_row(n_comparisons)
+        new_row <- create_evaluation_row(N_COMPARISONS)
         insertUI("#evaluation_content",
                  "beforeEnd",
                  new_row,
                  immediate=FALSE
                  )
-        create_plot_listener(n_comparisons)
-        create_evaluation_plot_renders(n_comparisons)
-        create_download_handler(n_comparisons)
-        create_update_selection_listeners(n_comparisons)
+        create_plot_listener(N_COMPARISONS)
+        create_evaluation_plot_renders(N_COMPARISONS)
+        create_download_handler(N_COMPARISONS)
+        create_update_selection_listeners(N_COMPARISONS)
         
-        if (n_comparisons == MAX_COMPARISONS) {
+        if (N_COMPARISONS == MAX_COMPARISONS) {
             disable("add_comparison")
             disable("copy_comparison")
         }
-        if (n_comparisons == 2) {
+        if (N_COMPARISONS == 2) {
             enable("remove_comparison")
             enable("remove_all_comparison")
         }
     })
 
     observeEvent(input$copy_comparison, {
-        n_comparisons <<- n_comparisons + 1
+        N_COMPARISONS <<- N_COMPARISONS + 1
         # Insert UI and create plot renderers and button listeners
-        new_row <- create_evaluation_row(n_comparisons)
+        new_row <- create_evaluation_row(N_COMPARISONS)
         insertUI("#evaluation_content",
                  "beforeEnd",
                  new_row,
                  immediate=TRUE
                  )
         updateSelectInput(session,
-                          sprintf("instrument_select_%d", n_comparisons),
-                          selected = input[[sprintf("instrument_select_%d", n_comparisons-1)]])
+                          sprintf("instrument_select_%d", N_COMPARISONS),
+                          selected = input[[sprintf("instrument_select_%d", N_COMPARISONS-1)]])
         updateDateRangeInput(session,
-                             sprintf("date_%d", n_comparisons),
-                             start = input[[sprintf("date_%d", n_comparisons-1)]][1],
-                             end = input[[sprintf("date_%d", n_comparisons-1)]][2]
+                             sprintf("date_%d", N_COMPARISONS),
+                             start = input[[sprintf("date_%d", N_COMPARISONS-1)]][1],
+                             end = input[[sprintf("date_%d", N_COMPARISONS-1)]][2]
                              )
         updateSelectInput(session,
-                          sprintf("cal_%d", n_comparisons),
-                          selected = input[[sprintf("cal_%d", n_comparisons-1)]])
+                          sprintf("cal_%d", N_COMPARISONS),
+                          selected = input[[sprintf("cal_%d", N_COMPARISONS-1)]])
         updateSelectInput(session,
-                          sprintf("sensornumber_%d", n_comparisons),
-                          selected = input[[sprintf("sensornumber_%d", n_comparisons-1)]])
+                          sprintf("sensornumber_%d", N_COMPARISONS),
+                          selected = input[[sprintf("sensornumber_%d", N_COMPARISONS-1)]])
 
-        create_plot_listener(n_comparisons)
-        create_evaluation_plot_renders(n_comparisons)
-        create_download_handler(n_comparisons)
-        create_update_selection_listeners(n_comparisons)
+        create_plot_listener(N_COMPARISONS)
+        create_evaluation_plot_renders(N_COMPARISONS)
+        create_download_handler(N_COMPARISONS)
+        create_update_selection_listeners(N_COMPARISONS)
 
-        if (n_comparisons == MAX_COMPARISONS) {
+        if (N_COMPARISONS == MAX_COMPARISONS) {
             disable("add_comparison")
             disable("copy_comparison")
         }
-        if (n_comparisons == 2) {
+        if (N_COMPARISONS == 2) {
             enable("remove_comparison")
             enable("remove_all_comparison")
         }
@@ -439,9 +439,9 @@ server <- function(session, input, output) {
     }
 
     observeEvent(input$remove_comparison, {
-        remove_row(n_comparisons)
-        n_comparisons <<- n_comparisons - 1
-        if (n_comparisons == 1) {
+        remove_row(N_COMPARISONS)
+        N_COMPARISONS <<- N_COMPARISONS - 1
+        if (N_COMPARISONS == 1) {
             enable("add_comparison")
             enable("copy_comparison")
             disable("remove_comparison")
@@ -450,10 +450,10 @@ server <- function(session, input, output) {
     })
     
     observeEvent(input$remove_all_comparison, {
-        for (i in 2:n_comparisons) {
+        for (i in 2:N_COMPARISONS) {
             remove_row(i)
         }
-        n_comparisons <<- 1
+        N_COMPARISONS <<- 1
         disable("remove_comparison")
         disable("remove_all_comparison")
         enable("add_comparison")
@@ -465,4 +465,28 @@ server <- function(session, input, output) {
         selectInput("measurand", "Pollutant",
                     choices=MEASURANDS)
     })
+    
+    # Update all plots when measurand / or time resolution changes
+    observeEvent(
+        {
+            input$measurand
+            input$timeavg
+        },
+        {
+            if (!measurand_dropdown_created) return()
+
+            for (i in seq(N_COMPARISONS)) {
+                dates <- input[[sprintf("date_%d", i)]]
+                dfs[[sprintf("df_%d", i)]] <- download_data(
+                    con,
+                    input[[sprintf("instrument_select_%d", i)]],
+                    input$measurand,
+                    input$timeavg,
+                    dates[1],
+                    dates[2],
+                    input[[sprintf("sensornumber_%d", i)]],
+                    input[[sprintf("cal_%d", i)]]
+                )
+            }
+        }, ignoreInit = TRUE)
 }
