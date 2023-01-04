@@ -21,12 +21,21 @@ if (is_local) {
 }
 
 MEASURANDS <- c("NO2", "O3", "PM2.5")
+MET_FIELDS <- c('Temperature', 'RelHumidity')
 STUDY_START <- as_date("2019-12-10")
 STUDY_END <- as_date("2022-10-31")
 CREDS <- fromJSON(creds_fn)
 MAX_COMPARISONS <- 4
 
-download_data <- function(con, in_instrument, in_pollutant, in_avg, in_start, in_end, in_sensornumber, in_cal) {
+download_data <- function(con, 
+                          in_instrument,
+                          in_pollutant,
+                          in_avg,
+                          in_start,
+                          in_end,
+                          in_sensornumber,
+                          in_cal,
+                          met_variables) {
     lcs <- tbl(con, "lcs_hourly") %>%
         filter(instrument == in_instrument,
                measurand == in_pollutant,
@@ -39,18 +48,93 @@ download_data <- function(con, in_instrument, in_pollutant, in_avg, in_start, in
     lcs <- lcs %>%
             inner_join(tbl(con, "ref_hourly") %>% select(-version) %>% rename(ref=measurement), 
                        by=c("location", "time", "measurand"))
+    # Also download selected met variables
+    # Create a dataframe containing all possible combinations of met factors, time, 
+    # and location, then inner join this on what's available in the database
+    time_locations <- lcs |> distinct(time, location) |> collect()
+    ref_met <- tbl(con, "ref_hourly") |>
+        filter(
+            time %in% local(unique(time_locations$time)),
+            location %in% local(unique(time_locations$location)),
+            measurand %in% met_variables
+        ) |>
+        select(time, location, measurand, measurement) |>
+        pivot_wider(names_from=measurand, values_from=measurement)
+    lcs <- lcs %>% left_join(ref_met, by=c("time", "location"))
+    
     if (in_avg == 'Daily') {
         lcs <- lcs %>%
                 mutate(time = floor_date(time, "day")) %>%
                 group_by(time, instrument, measurand, sensornumber, version, location) %>%
                 summarise(lcs = mean(lcs, na.rm=T),
-                          ref = mean(ref, na.rm=T)) %>%
+                          ref = mean(ref, na.rm=T),
+                          across(met_variables, mean, na.rm=T)) %>%
                 ungroup()
     }
     lcs %>% collect()
 }
 
+# Diagnostic plot functions
+plot_residuals_time <- function(data, lcs_column="lcs", reference_column="reference", time_column="time") {
+    data %>%
+        dplyr::rename(lcs = lcs_column,
+               reference = reference_column,
+               time = time_column) %>%
+        dplyr::mutate(error = reference - lcs) %>%
+        ggplot2::ggplot(ggplot2::aes(x=time, y=error)) +
+            ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
+            ggplot2::geom_line(na.rm=T) +
+            ggplot2::theme_bw() +
+            ggplot2::theme(
+                panel.grid.minor = ggplot2::element_blank()
+            ) +
+            ggplot2::labs(x="", y="Error (reference - lcs)")
+}
 
+plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="reference") {
+    data %>%
+        dplyr::rename(lcs = lcs_column,
+                      reference = reference_column) %>%
+        dplyr::mutate(error = reference - lcs) %>%
+        ggplot2::ggplot(ggplot2::aes(x=lcs, y=error)) +
+        ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
+        ggpointdensity::geom_pointdensity(na.rm=T) +
+        ggplot2::geom_smooth(colour="red", na.rm=T) +
+        ggplot2::scale_x_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
+        ggplot2::scale_y_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
+        ggplot2::theme_bw() +
+        ggplot2::coord_fixed() +
+        ggplot2::scale_colour_viridis_c() +
+        ggplot2::guides(colour="none") +
+        ggplot2::theme(
+            panel.grid.minor = ggplot2::element_blank(),
+            axis.title.x = ggplot2::element_text(size=10)
+        ) +
+        ggplot2::labs(x="[LCS]", y="Error (reference - lcs)")
+}
+
+plot_residuals_met <- function(data, lcs_column="lcs", reference_column="reference",
+                               met_column="Temperature") {
+    data %>%
+        dplyr::rename(lcs = lcs_column,
+                      reference = reference_column,
+                      met = met_column) %>%
+        dplyr::mutate(error = reference - lcs) %>%
+        ggplot2::ggplot(ggplot2::aes(x=met, y=error)) +
+        ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
+        ggpointdensity::geom_pointdensity(na.rm=T) +
+        ggplot2::geom_smooth(colour="red", na.rm=T) +
+        ggplot2::scale_x_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
+        ggplot2::scale_y_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
+        ggplot2::theme_bw() +
+        ggplot2::scale_colour_viridis_c() +
+        ggplot2::guides(colour="none") +
+        ggplot2::theme(
+            panel.grid.minor = ggplot2::element_blank(),
+            axis.title.x = ggplot2::element_text(size=10)
+        ) +
+        ggplot2::labs(x=met_column, y="Error (reference - lcs)")
+}
 
 ########################################
 
@@ -102,21 +186,21 @@ server <- function(session, input, output) {
                 status="success"
             ),
             box(
-                title="Time-series",
+                title=div("Time-series", id=sprintf("box_timeseries_%d", i)),
                 withSpinner(plotOutput(sprintf("timeseries_%d", i))),
                 width=3,
                 solidHeader = TRUE,
                 status="primary"
             ),
             box(
-                title="Scatter",
+                title=div("Regression", id=sprintf("box_scatter_%d", i)),
                 withSpinner(plotOutput(sprintf("scatter_%d", i))),
                 width=3,
                 solidHeader = TRUE,
                 status="primary"
             ),
             box(
-                title="Bland-Altman",
+                title=div("Bland-Altman", id=sprintf("box_ba_%d", i)),
                 withSpinner(plotOutput(sprintf("ba_%d", i))),
                 width=3,
                 solidHeader = TRUE,
@@ -137,7 +221,8 @@ server <- function(session, input, output) {
                 dates[1],
                 dates[2],
                 input[[sprintf("sensornumber_%d", i)]],
-                input[[sprintf("cal_%d", i)]]
+                input[[sprintf("cal_%d", i)]],
+                MET_FIELDS
             )
 
             shinyjs::showElement(id=sprintf("download_%d", i))
@@ -156,10 +241,14 @@ server <- function(session, input, output) {
                      "No datapoints found, check selection criteria."
                  )
             )
-            plot_time_series(df, lcs_column="lcs", reference_column="ref", time_column="time") +
-                guides(colour="legend") +
-                theme(legend.position = c(0.9, 0.9),
-                      legend.background = element_rect(fill=NA))
+            if (input$plottype == 'Evaluation') {
+                plot_time_series(df, lcs_column="lcs", reference_column="ref", time_column="time") +
+                    guides(colour="legend") +
+                    theme(legend.position = c(0.9, 0.9),
+                          legend.background = element_rect(fill=NA))
+            } else if (input$plottype == 'Diagnostic') {
+                plot_residuals_time(df, lcs_column="lcs", reference_column="ref")
+            }
         })
         
         # Scatter
@@ -171,10 +260,18 @@ server <- function(session, input, output) {
                      "No datapoints found, check selection criteria."
                  )
             )
-            suppressMessages(plot_scatter(df, lcs_column="lcs", reference_column="ref") + coord_cartesian())
+            if (input$plottype == 'Evaluation') {
+                suppressMessages(plot_scatter(df, lcs_column="lcs", reference_column="ref") + coord_cartesian())
+            } else if (input$plottype == 'Diagnostic') {
+                # TODO hide warnings produced by automatically detecting the appropriate
+                # smooth method. I don't care whether a loess or a gam is fitted,
+                # I just don't want to pollute the logs.
+                # This isn't a warning or message so can't be suppressed in the usual way
+                plot_residuals_fitted(df, lcs_column="lcs", reference_column="ref")
+            }
         })
         
-        # Bland-Altman
+        # Bland-Altman / residual vs met
         output[[sprintf("ba_%d", i)]] <- renderPlot({
             df <- dfs[[df_id]]
             req(df)
@@ -183,7 +280,16 @@ server <- function(session, input, output) {
                      "No datapoints found, check selection criteria."
                  )
             )
-            plot_bland_altman(df, lcs_column="lcs", reference_column="ref")
+            if (input$plottype == 'Evaluation') {
+                plot_bland_altman(df, lcs_column="lcs", reference_column="ref")
+            } else if (input$plottype == 'Diagnostic') {
+                # TODO hide warnings produced by automatically detecting the appropriate
+                # smooth method. I don't care whether a loess or a gam is fitted,
+                # I just don't want to pollute the logs.
+                # This isn't a warning or message so can't be suppressed in the usual way
+                plot_residuals_met(df, lcs_column="lcs", reference_column="ref",
+                                   met_column=input$met_diagnostic)
+            }
         })
     }
     
@@ -466,7 +572,33 @@ server <- function(session, input, output) {
                     choices=MEASURANDS)
     })
     
-    # Update all plots when measurand / or time resolution changes
+    output$met_selection <- renderUI({
+        hidden(selectInput("met_diagnostic", "Met factor",
+                    choices=MET_FIELDS))
+    })
+    
+    # Only show the dropdown to select met factors when in diagnostic mode
+    # TODO correctly display the met factor dropdown and the appropriate titles
+    # when the page loads and is already in evaluation mode
+    observeEvent(input$plottype, {
+        if (input$plottype == 'Evaluation') {
+            hideElement("met_diagnostic")
+            for (i in seq(N_COMPARISONS)) {
+                shinyjs::html(sprintf("box_timeseries_%d", i), "Time-series")
+                shinyjs::html(sprintf("box_scatter_%d", i), "Regression")
+                shinyjs::html(sprintf("box_ba_%d", i), "Bland-Altman")
+            }
+        } else if (input$plottype == 'Diagnostic') {
+            showElement("met_diagnostic")
+            for (i in seq(N_COMPARISONS)) {
+                shinyjs::html(sprintf("box_timeseries_%d", i), "Error against time")
+                shinyjs::html(sprintf("box_scatter_%d", i), "Error against LCS")
+                shinyjs::html(sprintf("box_ba_%d", i), "Error against meteorological factor")
+            }
+        }
+    }, ignoreInit = FALSE, ignoreNULL = TRUE)
+    
+    # Redownload data when measurand / or time resolution changes
     observeEvent(
         {
             input$measurand
@@ -483,8 +615,10 @@ server <- function(session, input, output) {
                     dates[1],
                     dates[2],
                     input[[sprintf("sensornumber_%d", i)]],
-                    input[[sprintf("cal_%d", i)]]
+                    input[[sprintf("cal_%d", i)]],
+                    MET_FIELDS
                 )
             }
         }, ignoreInit = TRUE)
 }
+# TODO Remove the warning when doing the rename trick

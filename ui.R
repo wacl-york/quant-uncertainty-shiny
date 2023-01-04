@@ -10,8 +10,7 @@ ui <- dashboardPage(
             sidebarMenu(
                 menuItem("About", tabName="about", icon=icon("house")),
                 menuItem("Devices", tabName="devices", icon=icon("microscope")),
-                menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple")),
-                menuItem("Diagnostics", tabName="diagnostics", icon=icon("wrench"))
+                menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple"))
             )
     ),
     dashboardBody(
@@ -60,16 +59,14 @@ ui <- dashboardPage(
                                      choices=c("Hourly", "Daily"),
                                      selected="Hourly",
                                      inline=TRUE),
-                        uiOutput("measurand_selection")
+                        uiOutput("measurand_selection"),
+                        radioButtons("plottype", "Plot type",
+                                     choices=c("Evaluation", "Diagnostic"),
+                                     selected="Evaluation", inline=TRUE),
+                        uiOutput("met_selection")
                     ),
                     br(),
                     uiOutput("evaluation_content")
-            ),
-            tabItem(tabName="diagnostics",
-                    # TODO
-                    # Error vs reference,
-                    # Error vs time
-                    h2("Diagnostics"),
             )
         )
     )
