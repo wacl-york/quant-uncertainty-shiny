@@ -22,6 +22,7 @@ if (is_local) {
 
 MEASURANDS <- c("NO2", "O3", "PM2.5")
 MET_FIELDS <- c('Temperature', 'RelHumidity')
+TIME_FIELDS <- c('Hour of day', 'Day of week')
 STUDY_START <- as_date("2019-12-10")
 STUDY_END <- as_date("2022-10-31")
 CREDS <- fromJSON(creds_fn)
@@ -35,7 +36,8 @@ download_data <- function(con,
                           in_end,
                           in_sensornumber,
                           in_cal,
-                          met_variables) {
+                          met_variables,
+                          time_variables) {
     lcs <- tbl(con, "lcs_hourly") %>%
         filter(instrument == in_instrument,
                measurand == in_pollutant,
@@ -51,14 +53,14 @@ download_data <- function(con,
     # Also download selected met variables
     # Create a dataframe containing all possible combinations of met factors, time, 
     # and location, then inner join this on what's available in the database
-    time_locations <- lcs |> distinct(time, location) |> collect()
-    ref_met <- tbl(con, "ref_hourly") |>
+    time_locations <- lcs %>% distinct(time, location) %>% collect()
+    ref_met <- tbl(con, "ref_hourly") %>%
         filter(
             time %in% local(unique(time_locations$time)),
             location %in% local(unique(time_locations$location)),
             measurand %in% met_variables
-        ) |>
-        select(time, location, measurand, measurement) |>
+        ) %>%
+        select(time, location, measurand, measurement) %>%
         pivot_wider(names_from=measurand, values_from=measurement)
     lcs <- lcs %>% left_join(ref_met, by=c("time", "location"))
     
@@ -71,7 +73,26 @@ download_data <- function(con,
                           across(met_variables, mean, na.rm=T)) %>%
                 ungroup()
     }
-    lcs %>% collect()
+    
+    lcs <- lcs %>% collect()
+    
+    # The following datetime conversions can't get translated to SQL
+    if ("Hour of day" %in% time_variables) {
+        lcs <- lcs %>%
+            mutate(`Hour of day` = hour(time))
+    }
+    
+    if ("Day of week" %in% time_variables) {
+        # Will create a column holding a datetime specific to one particular week
+        # The actual dates themselves are arbitrary, so I'm using the week 
+        # 2020-01-06 - 2020-01-12 as it's Monday - Friday
+        lcs <- lcs %>%
+            mutate(hod = hour(time),
+                   dow = wday(time, week_start=1),
+                   `Day of week` = as_datetime("2020-01-06") + days(dow) - days(1) + hours(hod)) %>%
+            select(-hod, -dow)
+    }
+    lcs
 }
 
 # Diagnostic plot functions
@@ -113,7 +134,7 @@ plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="refe
 
 plot_residuals_met <- function(data, lcs_column="lcs", reference_column="reference",
                                met_column="Temperature") {
-    data %>%
+    p <- data %>%
         dplyr::select(dplyr::all_of(c(lcs_column, reference_column,  met_column))) %>%
         setNames(c('lcs', 'reference', 'met')) %>%
         dplyr::mutate(error = reference - lcs) %>%
@@ -121,7 +142,6 @@ plot_residuals_met <- function(data, lcs_column="lcs", reference_column="referen
         ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
         ggpointdensity::geom_pointdensity(na.rm=T) +
         ggplot2::geom_smooth(colour="red", na.rm=T) +
-        ggplot2::scale_x_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
         ggplot2::scale_y_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
         ggplot2::theme_bw() +
         ggplot2::scale_colour_viridis_c() +
@@ -131,6 +151,21 @@ plot_residuals_met <- function(data, lcs_column="lcs", reference_column="referen
             axis.title.x = ggplot2::element_text(size=10)
         ) +
         ggplot2::labs(x=met_column, y="Error (reference - lcs)")
+    
+    if (met_column %in% c('Hour of day', 'Day of week')) {
+        if (met_column == 'Hour of day') {
+            p <- p + ggplot2::scale_x_continuous(
+                breaks=seq(0, 24, by=3),
+                labels=sprintf("%02d:00", (seq(0, 24, by=3))))
+        } else if (met_column == 'Day of week') {
+            p <- p + ggplot2::scale_x_datetime(
+                date_labels = "%a",
+                date_breaks = "1 day")
+        }
+    } else {
+        p <- p + ggplot2::scale_x_continuous() 
+    }
+    p
 }
 
 ########################################
@@ -219,7 +254,8 @@ server <- function(session, input, output) {
                 dates[2],
                 input[[sprintf("sensornumber_%d", i)]],
                 input[[sprintf("cal_%d", i)]],
-                MET_FIELDS
+                MET_FIELDS,
+                TIME_FIELDS
             )
 
             shinyjs::showElement(id=sprintf("download_%d", i))
@@ -567,13 +603,14 @@ server <- function(session, input, output) {
     })
     
     output$met_selection <- renderUI({
-        hidden(selectInput("met_diagnostic", "Met factor",
-                    choices=MET_FIELDS))
+        hidden(selectInput("met_diagnostic", "External factor",
+                    choices=c(MET_FIELDS, TIME_FIELDS)))
     })
     
-    # Only show the dropdown to select met factors when in diagnostic mode
-    # TODO correctly display the met factor dropdown and the appropriate titles
-    # when the page loads and is already in evaluation mode
+    # TODO When the page loads ensure that all radioButtons are back to their defaults
+    # i.e. Plot type = Evaluation, as this is assumed for other UI elements
+    # However, if the user refreshes the page it seems to restore previously
+    # selected radioButtons
     observeEvent(input$plottype, {
         if (input$plottype == 'Evaluation') {
             hideElement("met_diagnostic")
@@ -587,10 +624,26 @@ server <- function(session, input, output) {
             for (i in seq(N_COMPARISONS)) {
                 shinyjs::html(sprintf("box_timeseries_%d", i), "Error against time")
                 shinyjs::html(sprintf("box_scatter_%d", i), "Error against LCS")
-                shinyjs::html(sprintf("box_ba_%d", i), "Error against meteorological factor")
+                shinyjs::html(sprintf("box_ba_%d", i), "Error against external factor")
             }
         }
     }, ignoreInit = FALSE, ignoreNULL = TRUE)
+    
+    # When 24 hour averaging is chosen, don't let a user select hour of the day
+    observeEvent(input$timeavg, {
+        all_choices <- c(MET_FIELDS, TIME_FIELDS)
+        selected <- input$met_diagnostic
+        if (input$timeavg == 'Daily') {
+            all_choices <- setdiff(all_choices, "Hour of day")
+            if (input$met_diagnostic == 'Hour of day') {
+                selected <- 'Day of week'
+            }
+        }
+        updateSelectInput(session=session,
+                          "met_diagnostic",
+                          choices=all_choices,
+                          selected = selected)
+    }, ignoreInit = TRUE)
     
     # Redownload data when measurand / or time resolution changes
     observeEvent(
@@ -610,7 +663,8 @@ server <- function(session, input, output) {
                     dates[2],
                     input[[sprintf("sensornumber_%d", i)]],
                     input[[sprintf("cal_%d", i)]],
-                    MET_FIELDS
+                    MET_FIELDS,
+                    TIME_FIELDS
                 )
             }
         }, ignoreInit = TRUE)
