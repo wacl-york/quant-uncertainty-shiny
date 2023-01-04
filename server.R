@@ -77,9 +77,8 @@ download_data <- function(con,
 # Diagnostic plot functions
 plot_residuals_time <- function(data, lcs_column="lcs", reference_column="reference", time_column="time") {
     data %>%
-        dplyr::rename(lcs = lcs_column,
-               reference = reference_column,
-               time = time_column) %>%
+        dplyr::select(dplyr::all_of(c(time_column, lcs_column, reference_column))) %>%
+        setNames(c('time', 'lcs', 'reference')) %>%
         dplyr::mutate(error = reference - lcs) %>%
         ggplot2::ggplot(ggplot2::aes(x=time, y=error)) +
             ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
@@ -93,8 +92,8 @@ plot_residuals_time <- function(data, lcs_column="lcs", reference_column="refere
 
 plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="reference") {
     data %>%
-        dplyr::rename(lcs = lcs_column,
-                      reference = reference_column) %>%
+        dplyr::select(dplyr::all_of(c(lcs_column, reference_column))) %>%
+        setNames(c('lcs', 'reference')) %>%
         dplyr::mutate(error = reference - lcs) %>%
         ggplot2::ggplot(ggplot2::aes(x=lcs, y=error)) +
         ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
@@ -103,7 +102,6 @@ plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="refe
         ggplot2::scale_x_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
         ggplot2::scale_y_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
         ggplot2::theme_bw() +
-        ggplot2::coord_fixed() +
         ggplot2::scale_colour_viridis_c() +
         ggplot2::guides(colour="none") +
         ggplot2::theme(
@@ -116,9 +114,8 @@ plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="refe
 plot_residuals_met <- function(data, lcs_column="lcs", reference_column="reference",
                                met_column="Temperature") {
     data %>%
-        dplyr::rename(lcs = lcs_column,
-                      reference = reference_column,
-                      met = met_column) %>%
+        dplyr::select(dplyr::all_of(c(lcs_column, reference_column,  met_column))) %>%
+        setNames(c('lcs', 'reference', 'met')) %>%
         dplyr::mutate(error = reference - lcs) %>%
         ggplot2::ggplot(ggplot2::aes(x=met, y=error)) +
         ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
@@ -618,4 +615,3 @@ server <- function(session, input, output) {
             }
         }, ignoreInit = TRUE)
 }
-# TODO Remove the warning when doing the rename trick
