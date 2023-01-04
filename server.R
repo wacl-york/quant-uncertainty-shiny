@@ -263,11 +263,11 @@ server <- function(session, input, output) {
             if (input$plottype == 'Evaluation') {
                 suppressMessages(plot_scatter(df, lcs_column="lcs", reference_column="ref") + coord_cartesian())
             } else if (input$plottype == 'Diagnostic') {
-                # TODO hide warnings produced by automatically detecting the appropriate
-                # smooth method. I don't care whether a loess or a gam is fitted,
-                # I just don't want to pollute the logs.
-                # This isn't a warning or message so can't be suppressed in the usual way
-                plot_residuals_fitted(df, lcs_column="lcs", reference_column="ref")
+                # The geom_smooth message is printed when the plot is rendered, not when
+                # it is generated, unlike the message about overloading the coordinate system
+                # in the scatter plot above
+                p <- plot_residuals_fitted(df, lcs_column="lcs", reference_column="ref")
+                suppressMessages(print(p))
             }
         })
         
@@ -283,12 +283,9 @@ server <- function(session, input, output) {
             if (input$plottype == 'Evaluation') {
                 plot_bland_altman(df, lcs_column="lcs", reference_column="ref")
             } else if (input$plottype == 'Diagnostic') {
-                # TODO hide warnings produced by automatically detecting the appropriate
-                # smooth method. I don't care whether a loess or a gam is fitted,
-                # I just don't want to pollute the logs.
-                # This isn't a warning or message so can't be suppressed in the usual way
-                plot_residuals_met(df, lcs_column="lcs", reference_column="ref",
+                p <- plot_residuals_met(df, lcs_column="lcs", reference_column="ref",
                                    met_column=input$met_diagnostic)
+                suppressMessages(print(p))
             }
         })
     }
