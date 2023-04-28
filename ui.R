@@ -4,7 +4,6 @@ library(shinydashboard)
 library(shinycssloaders)
 
 ui <- dashboardPage(
-
     dashboardHeader(title="QUANT"),
     dashboardSidebar(
             sidebarMenu(
@@ -15,6 +14,15 @@ ui <- dashboardPage(
     ),
     dashboardBody(
         useShinyjs(),
+        tags$head(
+            tags$script(
+                src = "https://www.googletagmanager.com/gtag/js?id=G-BYGZTN7CNN",
+                async = ""
+            ),
+            tags$script(
+                src = "static/js/gtag.js"
+            )
+        ),
         tabItems(
             tabItem(tabName="about",
                     h1("Quantification of Utility of Atmospheric Network Technologies: (QUANT)"),
