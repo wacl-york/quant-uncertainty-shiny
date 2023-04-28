@@ -423,8 +423,7 @@ server <- function(session, input, output) {
                         values_fn=function(x) sum(x > 0)) %>%
             rename(Instrument = instrument) %>%
             mutate(across(-Instrument,
-                   function(x) ifelse(x == 0, 'X', 
-                                      ifelse(x == 1, '✓', x))))
+                   function(x) ifelse(x == 0, 'X', '✓')))
 
         # Reorder both alphabetically and numerically (i.e. PA10 comes after PA2)
         instrument_order <- str_sort(unique(df$Instrument), numeric=TRUE)
@@ -440,7 +439,7 @@ server <- function(session, input, output) {
                 column_spec(i,
                             background = ifelse(df[[i]] == 'X',
                                                 'salmon',
-                                                ifelse(df[[i]] == '✓', 'white', 'lightgreen')))
+                                                'white'))
         }
         HTML(tab)
     })
