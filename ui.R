@@ -8,17 +8,19 @@ ui <- dashboardPage(
     dashboardHeader(title="QUANT"),
     dashboardSidebar(
             sidebarMenu(
-                menuItem("About", tabName="about", icon=icon("house")),
+                menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple")),
                 menuItem("Devices", tabName="devices", icon=icon("microscope")),
-                menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple"))
+                menuItem("About", tabName="about", icon=icon("house"))
             )
     ),
     dashboardBody(
         useShinyjs(),
         tabItems(
             tabItem(tabName="about",
-                    h1("QUANT"),
-                    p("Some information about the study here")
+                    h1("Quantification of Utility of Atmospheric Network Technologies: (QUANT)"),
+                    p("This dashboard is still under active development, with the initial release scheduled to coincide with the publication of a paper summarising the study.
+                      As such the dataset is currently limited to the main study participants, with the Wider Participation data being made available at a later date."),
+                    p("If you have any questions about the dashboard, please contact Stuart Lacy (stuart.lacy@york.ac.uk), while any questions about the study itself should be directed to Pete Edwards (pete.edwards@york.ac.uk).")
             ),
             tabItem(tabName="devices",
                     h1("Particpating devices"),
