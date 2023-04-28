@@ -25,6 +25,8 @@ MET_FIELDS <- c('Temperature', 'RelHumidity')
 TIME_FIELDS <- c('Hour of day', 'Day of week')
 STUDY_START <- as_date("2019-12-10")
 STUDY_END <- as_date("2022-10-31")
+DEFAULT_START_DATE <- as_date("2019-12-10")
+DEFAULT_END_DATE <- as_date("2020-03-10")
 CREDS <- fromJSON(creds_fn)
 MAX_COMPARISONS <- 4
 
@@ -197,8 +199,8 @@ server <- function(session, input, output) {
                             choices=instrument_names),
                 shiny::dateRangeInput(sprintf("date_%d", i),
                                       "Time-range",
-                                      start=STUDY_START,
-                                      end=STUDY_END,
+                                      start=DEFAULT_START_DATE,
+                                      end=DEFAULT_END_DATE,
                                       min=STUDY_START,
                                       max=STUDY_END),
                 selectInput(sprintf("cal_%d", i),
