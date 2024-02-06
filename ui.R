@@ -26,7 +26,7 @@ ui <- dashboardPage(
         tabItems(
             tabItem(tabName="about",
                     h1("Quantification of Utility of Atmospheric Network Technologies: (QUANT)"),
-                    p("This dashboard is still under active development, with the initial release scheduled to coincide with the publication of a paper summarising the study.
+                    p("This dashboard is still under active development and is currently in a beta state. We hope to finalise the app soon.
                       As such the dataset is currently limited to the main study participants, with the Wider Participation data being made available at a later date."),
                     p("If you have any questions about the dashboard, please contact Stuart Lacy (stuart.lacy@york.ac.uk), while any questions about the study itself should be directed to Pete Edwards (pete.edwards@york.ac.uk).")
             ),
@@ -58,22 +58,39 @@ ui <- dashboardPage(
             ),
             tabItem(tabName="evaluation",
                     h2("Compare devices"),
-                    fluidRow(
-                        # TODO clean up into a single row
+                    # TODO Add minutely
+                    box(title = "Settings",
+                        status="info",
+                        solidHeader = TRUE,
                         actionButton("add_comparison", "Add device"),
                         actionButton("copy_comparison", "Copy last device"),
                         disabled(actionButton("remove_comparison", "Remove device")),
                         disabled(actionButton("remove_all_comparison", "Remove all devices")),
-                        # TODO Add minutely
-                        radioButtons("timeavg", "Time resolution", 
-                                     choices=c("Hourly", "Daily"),
-                                     selected="Hourly",
-                                     inline=TRUE),
-                        uiOutput("measurand_selection"),
-                        radioButtons("plottype", "Plot type",
-                                     choices=c("Evaluation", "Diagnostic"),
-                                     selected="Evaluation", inline=TRUE),
-                        uiOutput("met_selection")
+                        br(),
+                        fluidRow(
+                            column(
+                                3,
+                                radioButtons("timeavg", "Time resolution",
+                                             choices=c("Hourly", "Daily"),
+                                             selected="Hourly",
+                                             inline=TRUE)
+                            ),
+                            column(
+                                3,
+                                uiOutput("measurand_selection"),
+                            ),
+                            column(
+                                3,
+                                radioButtons("plottype", "Plot type",
+                                             choices=c("Evaluation", "Diagnostic"),
+                                             selected="Evaluation", inline=TRUE),
+                            ),
+                            column(
+                                3,
+                                uiOutput("met_selection")
+                            ),
+                        ),
+                        width=12
                     ),
                     br(),
                     uiOutput("evaluation_content")
