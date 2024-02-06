@@ -26,7 +26,7 @@ ui <- dashboardPage(
         tabItems(
             tabItem(tabName="about",
                     h1("Quantification of Utility of Atmospheric Network Technologies: (QUANT)"),
-                    p("This dashboard is still under active development, with the initial release scheduled to coincide with the publication of a paper summarising the study.
+                    p("This dashboard is still under active development and is currently in a beta state. We hope to finalise the app soon.
                       As such the dataset is currently limited to the main study participants, with the Wider Participation data being made available at a later date."),
                     p("If you have any questions about the dashboard, please contact Stuart Lacy (stuart.lacy@york.ac.uk), while any questions about the study itself should be directed to Pete Edwards (pete.edwards@york.ac.uk).")
             ),
