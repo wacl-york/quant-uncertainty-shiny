@@ -58,22 +58,39 @@ ui <- dashboardPage(
             ),
             tabItem(tabName="evaluation",
                     h2("Compare devices"),
-                    fluidRow(
-                        # TODO clean up into a single row
+                    # TODO Add minutely
+                    box(title = "Settings",
+                        status="info",
+                        solidHeader = TRUE,
                         actionButton("add_comparison", "Add device"),
                         actionButton("copy_comparison", "Copy last device"),
                         disabled(actionButton("remove_comparison", "Remove device")),
                         disabled(actionButton("remove_all_comparison", "Remove all devices")),
-                        # TODO Add minutely
-                        radioButtons("timeavg", "Time resolution", 
-                                     choices=c("Hourly", "Daily"),
-                                     selected="Hourly",
-                                     inline=TRUE),
-                        uiOutput("measurand_selection"),
-                        radioButtons("plottype", "Plot type",
-                                     choices=c("Evaluation", "Diagnostic"),
-                                     selected="Evaluation", inline=TRUE),
-                        uiOutput("met_selection")
+                        br(),
+                        fluidRow(
+                            column(
+                                3,
+                                radioButtons("timeavg", "Time resolution",
+                                             choices=c("Hourly", "Daily"),
+                                             selected="Hourly",
+                                             inline=TRUE)
+                            ),
+                            column(
+                                3,
+                                uiOutput("measurand_selection"),
+                            ),
+                            column(
+                                3,
+                                radioButtons("plottype", "Plot type",
+                                             choices=c("Evaluation", "Diagnostic"),
+                                             selected="Evaluation", inline=TRUE),
+                            ),
+                            column(
+                                3,
+                                uiOutput("met_selection")
+                            ),
+                        ),
+                        width=12
                     ),
                     br(),
                     uiOutput("evaluation_content")
