@@ -104,7 +104,7 @@ plot_residuals_time <- function(data, lcs_column="lcs", reference_column="refere
         setNames(c('time', 'lcs', 'reference')) %>%
         dplyr::mutate(error = reference - lcs) %>%
         ggplot2::ggplot(ggplot2::aes(x=time, y=error)) +
-            ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
+            ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", linewidth=0.7) +
             ggplot2::geom_line(na.rm=T) +
             ggplot2::theme_bw() +
             ggplot2::theme(
@@ -119,7 +119,7 @@ plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="refe
         setNames(c('lcs', 'reference')) %>%
         dplyr::mutate(error = reference - lcs) %>%
         ggplot2::ggplot(ggplot2::aes(x=lcs, y=error)) +
-        ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
+        ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", linewidth=0.7) +
         ggpointdensity::geom_pointdensity(na.rm=T) +
         ggplot2::geom_smooth(colour="red", na.rm=T) +
         ggplot2::scale_x_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
@@ -141,7 +141,7 @@ plot_residuals_met <- function(data, lcs_column="lcs", reference_column="referen
         setNames(c('lcs', 'reference', 'met')) %>%
         dplyr::mutate(error = reference - lcs) %>%
         ggplot2::ggplot(ggplot2::aes(x=met, y=error)) +
-        ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", size=0.7) +
+        ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", linewidth=0.7) +
         ggpointdensity::geom_pointdensity(na.rm=T) +
         ggplot2::geom_smooth(colour="red", na.rm=T) +
         ggplot2::scale_y_continuous(expand=ggplot2::expansion(c(0, 0.5))) +
