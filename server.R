@@ -72,7 +72,7 @@ download_data <- function(con,
                 group_by(time, instrument, measurand, sensornumber, version, location) %>%
                 summarise(lcs = mean(lcs, na.rm=T),
                           ref = mean(ref, na.rm=T),
-                          across(met_variables, mean, na.rm=T)) %>%
+                          across(met_variables, ~mean(.x, na.rm=T))) %>%
                 ungroup()
     }
     
