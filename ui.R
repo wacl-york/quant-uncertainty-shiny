@@ -9,7 +9,8 @@ ui <- dashboardPage(
             sidebarMenu(
                 menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple")),
                 menuItem("Devices", tabName="devices", icon=icon("microscope")),
-                menuItem("About", tabName="about", icon=icon("house"))
+                menuItem("About", tabName="about", icon=icon("house")),
+                menuItem("Own Data Evaluation", tabName="input", icon=icon("chart-simple") )
             )
     ),
     dashboardBody(
@@ -23,7 +24,31 @@ ui <- dashboardPage(
                 src = "static/js/gtag.js"
             )
         ),
+       
         tabItems(
+            tabItem(tabName="input",
+                    h2("Compare your own sampled data"),
+                    box(title = "Upload the file of your data",
+                        p("Data needs to be in an excel sheet."),
+                        p("Excel sheet needs the headings of the columns to be instrument, concentration, date, etc."),
+                        status="info",
+                        solidHeader = TRUE,
+                        width = 12,
+                        actionButton("add_data", "Add data"), #file searcher button
+                        
+                        br(),
+                        
+                    ),
+                    fluidRow(box(
+                        title="Plot",
+                            htmlOutput("error_message"),
+                            plotOutput("inputted_plot"),
+                        width=12
+                        
+                    ))
+                     
+                    
+                    ),
             tabItem(tabName="about",
                     h1("Quantification of Utility of Atmospheric Network Technologies: (QUANT)"),
                     p("This dashboard is still under active development and is currently in a beta state. We hope to finalise the app soon.

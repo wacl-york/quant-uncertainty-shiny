@@ -507,6 +507,31 @@ server <- function(session, input, output) {
     create_update_selection_listeners(1)
     
     ########################### Listeners to add/remove instrument boxes
+    
+   
+    
+dfile <- reactiveValues()
+    
+ observeEvent(input$add_data, { #links to choosing a file with button on adding own data page
+       dfile$inputted_plot <- file.choose()
+       
+       if (is.na(format_from_ext(dfile$inputted_plot))) {
+           output$error_message <- renderUI("Please choose excel sheet")
+           }
+           
+       else {
+           output$error_message <- renderUI("")
+           dfile$inputted_plot <- ggplot(read_excel(dfile$inputted_plot, na = c("", "N/A"), col_types = c("numeric", "numeric", "numeric", "date")) , aes(x = date, y = concentrationO3)) + 
+           geom_line(na.rm = T)
+         }
+   })
+  
+output$inputted_plot <- renderPlot({ #render plot
+      dfile$inputted_plot
+      })
+      
+   #############################
+         
     observeEvent(input$add_comparison, {
         N_COMPARISONS <<- N_COMPARISONS + 1
         # Insert UI and create plot renderers and button listeners
