@@ -34,10 +34,19 @@ ui <- dashboardPage(
                         status="info",
                         solidHeader = TRUE,
                         width = 12,
-                        actionButton("add_data", "Add data"), #file searcher button
-                        
+                        fluidRow(
+                            column(
+                                3,
+                                br(),
+                                actionButton("add_data", "Add data"), #file searcher button
+                            ),
+                            column(
+                                3,
+                                uiOutput("selected_option"), #choose pollutant type
+                            ),
+                        ),
+                      
                         br(),
-                        
                     ),
                     fluidRow(box(
                         title="Plot",

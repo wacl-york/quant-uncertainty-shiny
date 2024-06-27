@@ -8,6 +8,10 @@ library(tidyverse)
 library(lubridate)
 library(jsonlite)
 library(quantr)
+library(readxl)
+library(tidyverse)
+library(writexl)
+library(httr)
 
 options(dplyr.summarise.inform=FALSE)
 # Somewhat hacky way to tell if running hosted, but still the recommended method
@@ -511,6 +515,7 @@ server <- function(session, input, output) {
    
     
 dfile <- reactiveValues()
+yaxis <- reactiveValues()
     
  observeEvent(input$add_data, { #links to choosing a file with button on adding own data page
        dfile$inputted_plot <- file.choose()
@@ -521,14 +526,42 @@ dfile <- reactiveValues()
            
        else {
            output$error_message <- renderUI("")
-           dfile$inputted_plot <- ggplot(read_excel(dfile$inputted_plot, na = c("", "N/A"), col_types = c("numeric", "numeric", "numeric", "date")) , aes(x = date, y = concentrationO3)) + 
-           geom_line(na.rm = T)
+          # yaxis$measurand <- input$measurand
+          
+           if (yaxis$measurand == "NO2"){
+               dfile$inputted_plot <- ggplot(read_excel(dfile$inputted_plot, na = c("", "N/A"), col_types = c("numeric", "numeric", "numeric", "date")) , aes(x = date, y = NO2)) + 
+                   geom_line(na.rm = T)
+           }
+           else if (yaxis$measurand == "O3"){
+               dfile$inputted_plot <- ggplot(read_excel(dfile$inputted_plot, na = c("", "N/A"), col_types = c("numeric", "numeric", "numeric", "date")) , aes(x = date, y = O3)) + 
+                   geom_line(na.rm = T)
+           }
+           else if (yaxis$measurand == "PM2.5"){
+               dfile$inputted_plot <- ggplot(read_excel(dfile$inputted_plot, na = c("", "N/A"), col_types = c("numeric", "numeric", "numeric", "date")) , aes(x = date, y = PM2.5)) + 
+                   geom_line(na.rm = T)
+           }
+           
          }
    })
-  
+
 output$inputted_plot <- renderPlot({ #render plot
       dfile$inputted_plot
       })
+
+output$selected_option <- renderUI({ #dropdown menu list of pollutant choices
+         selectInput("measurand", "Pollutant type",
+                choices = MEASURANDS)
+   
+})
+
+observeEvent(
+    {
+        input$measurand   #detects changes to measurand(pollutants) or time res
+    },
+    yaxis$measurand <- input$measurand
+)
+
+
       
    #############################
          
@@ -674,13 +707,13 @@ output$inputted_plot <- renderPlot({ #render plot
     # Redownload data when measurand / or time resolution changes
     observeEvent(
         {
-            input$measurand
+            input$measurand   #detects changes to measurand(pollutants) or time res
             input$timeavg
         },
         {
-            for (i in seq(N_COMPARISONS)) {
+            for (i in seq(N_COMPARISONS)) {  #loops for all plots the user wants
                 dates <- input[[sprintf("date_%d", i)]]
-                dfs[[sprintf("df_%d", i)]] <- download_data(
+                dfs[[sprintf("df_%d", i)]] <- download_data(   #re-downloads data and resets the graph with different choice of pollutant/time res
                     con,
                     input[[sprintf("instrument_select_%d", i)]],
                     input$measurand,
