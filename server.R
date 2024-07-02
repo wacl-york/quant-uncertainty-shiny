@@ -511,58 +511,30 @@ server <- function(session, input, output) {
     create_update_selection_listeners(1)
     
     ########################### Listeners to add/remove instrument boxes
+
+    
+    
+    data2 <- reactive({
+        req(input$add_data)
+        
+        ext <- tools::file_ext(input$add_data$name)
+        shiny::validate(need(ext == "xlsx", "Invalid file; Please upload a .xlsx file"))
+        read_excel(input$add_data$datapath)
+    })
+    
+    output$inputted_plot <- renderPlot({
+        ggplot(
+            data2(), aes(x = date, y = .data[[input$measurand2]])
+            ) + geom_point() + geom_line()
+    })
+    
+    output$selected_option <- renderUI({ #dropdown menu list of pollutant choices
+        selectInput("measurand2", "Pollutant type",
+                    choices = MEASURANDS)
+    })
     
    
-    
-dfile <- reactiveValues()
-yaxis <- reactiveValues()
-    
- observeEvent(input$add_data, { #links to choosing a file with button on adding own data page
-       dfile$inputted_plot <- file.choose()
-       
-       if (is.na(format_from_ext(dfile$inputted_plot))) {
-           output$error_message <- renderUI("Please choose excel sheet")
-           }
-           
-       else {
-           output$error_message <- renderUI("")
-          # yaxis$measurand <- input$measurand
-          
-           if (yaxis$measurand == "NO2"){
-               dfile$inputted_plot <- ggplot(read_excel(dfile$inputted_plot, na = c("", "N/A"), col_types = c("numeric", "numeric", "numeric", "date")) , aes(x = date, y = NO2)) + 
-                   geom_line(na.rm = T)
-           }
-           else if (yaxis$measurand == "O3"){
-               dfile$inputted_plot <- ggplot(read_excel(dfile$inputted_plot, na = c("", "N/A"), col_types = c("numeric", "numeric", "numeric", "date")) , aes(x = date, y = O3)) + 
-                   geom_line(na.rm = T)
-           }
-           else if (yaxis$measurand == "PM2.5"){
-               dfile$inputted_plot <- ggplot(read_excel(dfile$inputted_plot, na = c("", "N/A"), col_types = c("numeric", "numeric", "numeric", "date")) , aes(x = date, y = PM2.5)) + 
-                   geom_line(na.rm = T)
-           }
-           
-         }
-   })
 
-output$inputted_plot <- renderPlot({ #render plot
-      dfile$inputted_plot
-      })
-
-output$selected_option <- renderUI({ #dropdown menu list of pollutant choices
-         selectInput("measurand", "Pollutant type",
-                choices = MEASURANDS)
-   
-})
-
-observeEvent(
-    {
-        input$measurand   #detects changes to measurand(pollutants) or time res
-    },
-    yaxis$measurand <- input$measurand
-)
-
-
-      
    #############################
          
     observeEvent(input$add_comparison, {

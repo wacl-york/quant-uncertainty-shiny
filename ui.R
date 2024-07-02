@@ -37,12 +37,14 @@ ui <- dashboardPage(
                         fluidRow(
                             column(
                                 3,
-                                br(),
-                                actionButton("add_data", "Add data"), #file searcher button
+                                
+                               # actionButton("add_data", "Add data"), #file searcher button
+                               fileInput("add_data", "Add data",accept = ".xlsx")
                             ),
                             column(
                                 3,
-                                uiOutput("selected_option"), #choose pollutant type
+                                uiOutput("selected_option"), #choose pollutant type,
+                                
                             ),
                         ),
                       
@@ -50,8 +52,9 @@ ui <- dashboardPage(
                     ),
                     fluidRow(box(
                         title="Plot",
-                            htmlOutput("error_message"),
+                           
                             plotOutput("inputted_plot"),
+                        
                         width=12
                         
                     ))
