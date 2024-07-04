@@ -33,6 +33,7 @@ DEFAULT_START_DATE <- as_date("2019-12-10")
 DEFAULT_END_DATE <- as_date("2020-03-10")
 CREDS <- fromJSON(creds_fn)
 MAX_COMPARISONS <- 4
+DEVICES <- c("AQM388","AQM389", "AQM390", "AQM391")
 
 download_data <- function(con, 
                           in_instrument,
@@ -400,14 +401,52 @@ server <- function(session, input, output) {
                 labs(x="", y="") +
                 scale_x_date(date_breaks="4 months",
                              date_labels = "%b %y") +
+                scale_fill_discrete("") +
                 theme(panel.grid.major.x = element_blank(),
                       panel.grid.minor.x = element_blank(),
                       panel.grid.minor.y = element_blank(),
                       legend.text = element_text(size=10),
                       axis.text.x = element_text(size=10),
-                      axis.text.y = element_text(size=9)) +
-                scale_fill_discrete("") +
-                theme(legend.position="bottom")
+                      axis.text.y = element_text(size=9),
+                      legend.position="bottom")
+                
+    })
+    
+    output$selected_device <- renderUI({ #dropdown menu list of pollutant choices
+        selectInput("device", "Device",
+                    choices = DEVICES)
+    })
+    
+    deviceoutputplot <- reactive({
+        df <- tbl(con, "deployment") %>%
+            inner_join(instruments, by="instrument") %>%
+            filter(instrument == input$device) %>%
+            collect() %>%
+            mutate(
+                range = as.integer(difftime(finish, start, units="days")),
+                midpoint = as_date(start) + floor((range)/2)
+            )
+        instruments_descending <- str_sort(unique(df$instrument), numeric=TRUE, decreasing=TRUE)
+        df %>%
+            mutate(instrument = factor(instrument, levels=instruments_descending)) %>%
+            ggplot(aes(x=midpoint, y=instrument, fill=location, width=range)) +
+            geom_tile(na.rm=T) +
+            theme_bw() +
+            labs(x="", y="") +
+            scale_x_date(date_breaks="2 months",
+                         date_labels = "%b %y") +
+            scale_fill_discrete("") +
+            theme(panel.grid.major.x = element_blank(),
+                  panel.grid.minor.x = element_blank(),
+                  panel.grid.minor.y = element_blank(),
+                  legend.text = element_text(size=10),
+                  axis.text.x = element_text(size=10),
+                  axis.text.y = element_text(size=9),
+                  legend.position="bottom")
+    })
+    
+    output$specdevice_deployment_plot <- renderPlot({
+        deviceoutputplot()
     })
     
     output$sensor_availability <- renderUI({

@@ -7,6 +7,7 @@ ui <- dashboardPage(
     dashboardHeader(title = "QUANT"),
     dashboardSidebar(
             sidebarMenu(
+                HTML("<a><img src= 'UOY.jpg'></img></a>"),
                 menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple")),
                 menuItem("Devices", tabName="devices", icon=icon("microscope")),
                 menuItem("About", tabName="about", icon=icon("house")),
@@ -14,7 +15,7 @@ ui <- dashboardPage(
                
                 
                HTML(paste0(
-                   "<br>
+                   "<br><br>
                    <table style = 'margin-left:auto; margin-right:auto; margin-bottom; 50px'>
                    <tr>
                    <td style = 'padding: 6px; font-size:24px;'><small><a href = 'mailto:wacl@york.ac.uk'><i class='fas fa-mail-bulk'></i></a></small></td>
@@ -89,9 +90,17 @@ ui <- dashboardPage(
                     h1("Particpating devices"),
                     fluidRow(
                         box(
-                            title="Device deployment history",
-                            withSpinner(
-                                plotOutput("deployment_plot")
+                            title="Device deployment history", 
+                            column(
+                                3,
+                                uiOutput("selected_device"), #choose device to see history of
+                            ),
+
+                                plotOutput("specdevice_deployment_plot"), #outputs specific device timeline
+br(), br(),br(),br(),
+p("All devices deployment history"),
+                           withSpinner(
+                                plotOutput("deployment_plot"),
                             ),
                             width=12
                         ),
