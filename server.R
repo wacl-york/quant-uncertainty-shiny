@@ -512,9 +512,7 @@ server <- function(session, input, output) {
     
     ########################### Listeners to add/remove instrument boxes
 
-    
-    
-    data2 <- reactive({
+    data <- reactive({  #user chooses excel file and the filepath is read
         req(input$add_data)
         
         ext <- tools::file_ext(input$add_data$name)
@@ -522,18 +520,39 @@ server <- function(session, input, output) {
         read_excel(input$add_data$datapath)
     })
     
-    output$inputted_plot <- renderPlot({
+    outputplot <- reactive({
         ggplot(
-            data2(), aes(x = date, y = .data[[input$measurand2]])
-            ) + geom_point() + geom_line()
+            data(), aes(x = date, y = .data[[input$measurand2]])
+        ) + geom_point() + geom_line()
     })
     
+    output$inputted_plot <- renderPlot({
+       outputplot() 
+    })
+
     output$selected_option <- renderUI({ #dropdown menu list of pollutant choices
         selectInput("measurand2", "Pollutant type",
                     choices = MEASURANDS)
     })
     
-   
+   # output$report <- downloadHandler(
+   #     filename = function(){
+   #         paste(tools::file_path_sans_ext(input$add_data), "report",  input$measurand2, ".csv", sep = " ")
+   #     },
+   #     content = function(filed) {
+   #         write.csv(data(), filed)
+   #     }
+   # )
+ 
+   output$report <- downloadHandler(
+       filename = function(){
+           paste(tools::file_path_sans_ext(input$add_data), "report",  input$measurand2, ".pdf", sep = " ")
+       },
+       content = function(file){
+           ggsave(file, outputplot())
+       }
+   )  
+
 
    #############################
          

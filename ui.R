@@ -4,7 +4,8 @@ library(shinydashboard)
 library(shinycssloaders)
 
 ui <- dashboardPage(
-    dashboardHeader(title="QUANT"),
+    title = "Quant",
+    dashboardHeader(title = span(img(src = "UoY_logo.png", height = 20), "Quant")),
     dashboardSidebar(
             sidebarMenu(
                 menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple")),
@@ -38,14 +39,18 @@ ui <- dashboardPage(
                             column(
                                 3,
                                 
-                               # actionButton("add_data", "Add data"), #file searcher button
-                               fileInput("add_data", "Add data",accept = ".xlsx")
+                               fileInput("add_data", "Add data", accept = ".xlsx")
                             ),
                             column(
                                 3,
                                 uiOutput("selected_option"), #choose pollutant type,
                                 
                             ),
+                            column(
+                                3,
+                                br(),
+                                downloadButton("report", "Generate Report"), #button to download report
+                            )
                         ),
                       
                         br(),
