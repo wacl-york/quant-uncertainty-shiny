@@ -4,15 +4,28 @@ library(shinydashboard)
 library(shinycssloaders)
 
 ui <- dashboardPage(
-    title = "Quant",
-    dashboardHeader(title = span(img(src = "UoY_logo.png", height = 20), "Quant")),
+    dashboardHeader(title = "QUANT"),
     dashboardSidebar(
             sidebarMenu(
                 menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple")),
                 menuItem("Devices", tabName="devices", icon=icon("microscope")),
                 menuItem("About", tabName="about", icon=icon("house")),
-                menuItem("Own Data Evaluation", tabName="input", icon=icon("chart-simple") )
+                menuItem("Own Data Evaluation", tabName="input", icon=icon("arrow-up-from-bracket") ),
+               
+                
+               HTML(paste0(
+                   "<br>
+                   <table style = 'margin-left:auto; margin-right:auto; margin-bottom; 50px'>
+                   <tr>
+                   <td style = 'padding: 6px; font-size:24px;'><small><a href = 'mailto:wacl@york.ac.uk'><i class='fas fa-mail-bulk'></i></a></small></td>
+                   <td style = 'padding: 6px; font-size:24px;'><small><a href= 'https://x.com/@AtmosChemYork'><i class='fab fa-twitter'></i></a></small></td>
+                   <td style = 'padding: 6px; font-size:24px;'><small><a href= 'tel:1904 322609'><i class='fas fa-phone'></i></a></small></td>
+                   </tr>
+                   </table>
+                   <p style = 'text-align: center;'><small><a href='https://www.york.ac.uk/chemistry/research/wacl/' >WACL</a> </small></p>")
+               )
             )
+            
     ),
     dashboardBody(
         useShinyjs(),
