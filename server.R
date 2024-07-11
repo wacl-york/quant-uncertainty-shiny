@@ -604,10 +604,11 @@ server <- function(session, input, output) {
    )  
    
    output$AQM388 <- downloadHandler(
-       filename = function(){"AQM389.pdf"},
+       filename = function(){"AQM388.pdf"},
        
        content = function(file) {
-            out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document") #, output_file=file)
+            out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document",
+                                     params = list(device = "AQM388", pollutant = "O3", cal_version = "cal1")) #, output_file=file)
             file.rename(out, file)
        }
           
