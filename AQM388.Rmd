@@ -1,0 +1,94 @@
+---
+title: "AQM388"
+output: pdf_document
+date: "2024-07-10"
+
+    
+---
+
+
+```{r}
+# params:
+#     device: "AQM388"
+#   #  comparison_start: ""
+#   #  comparison_end: ""
+#     pollutant: "NO2"
+#     cal_version: "cal1"
+# 
+library(DBI)
+library(knitr)
+library(kableExtra)
+library(RPostgres)
+library(shiny)
+library(shinyjs)
+library(tidyverse)
+library(lubridate)
+library(jsonlite)
+library(quantr)
+library(readxl)
+library(tidyverse)
+library(writexl)
+library(httr)
+
+options(dplyr.summarise.inform=FALSE)
+# Somewhat hacky way to tell if running hosted, but still the recommended method
+# https://stackoverflow.com/questions/31423144/how-to-know-if-the-app-is-running-at-local-or-on-server-r-shiny
+is_local <- Sys.getenv('SHINY_PORT') == ""
+
+if (is_local) {
+    creds_fn <- 'creds.json'
+} else {
+    creds_fn <- "/mnt/shiny/quant_us/creds.json"
+}
+
+CREDS <- fromJSON(creds_fn)
+
+ con <- dbConnect(Postgres(),
+                     dbname=CREDS$db,
+                     host=CREDS$host,
+                     port=CREDS$port,
+                     user=CREDS$username,
+                     password=CREDS$password)
+
+download_data <- function(con, 
+                          in_instrument,
+                          in_pollutant,
+                          in_avg,
+                          in_start,
+                          in_end,
+                          in_sensornumber,
+                          in_cal,
+                          met_variables,
+                          time_variables) {
+
+
+ in_instrument <- "AQM388"
+ in_pollutant <- "NO2"
+ in_cal <- "cal1"
+
+lcs <- tbl(con, "lcs_hourly") %>%
+        filter(instrument == in_instrument,
+               measurand == in_pollutant,
+               version == in_cal,
+               is.na(flag) | flag != 'Error') %>%
+        rename(lcsmeas = measurement)
+ 
+ 
+# lcs <- tbl(con, "lcs_hourly") %>%
+#         filter(instrument == params$device,
+#                measurand == params$pollutant,
+#                version == params$cal_version,
+#                is.na(flag) | flag != 'Error') %>%
+#         rename(lcsmeas = measurement)
+
+    lcs <- lcs %>%
+            inner_join(tbl(con, "ref_hourly") %>% select(-version) %>% rename(refmeas = measurement), 
+                       by=c("location", "time", "measurand")) 
+    lcs <- lcs %>%
+    mutate(ref_lcs = refmeas - lcsmeas)}
+
+r_rmse <- function(data, val) {data %>% summarize(rmse = sqrt(mean({{val}}**2, na.rm=T)))}
+ lcs %>% r_rmse(ref_lcs)
+```
+
+

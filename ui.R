@@ -7,11 +7,14 @@ ui <- dashboardPage(
     dashboardHeader(title = "QUANT"),
     dashboardSidebar(
             sidebarMenu(
-                HTML("<a><img src= 'UOY.jpg'></img></a>"),
+                HTML("<a><img src= 'UOY.jpg' width = '230'></img></a>
+                <br>
+                     <a><img src= 'UKRI.jpg' width = '230'></img></a>"),
                 menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple")),
                 menuItem("Devices", tabName="devices", icon=icon("microscope")),
                 menuItem("About", tabName="about", icon=icon("house")),
                 menuItem("Own Data Evaluation", tabName="input", icon=icon("arrow-up-from-bracket") ),
+                menuItem("Device Reports", tabName="report", icon=icon("database")),
                
                 
                HTML(paste0(
@@ -41,6 +44,94 @@ ui <- dashboardPage(
         ),
        
         tabItems(
+            tabItem(tabName="report",
+                    h2("Compare the QUANT devices data and generate their reports"),
+                    HTML(paste0(
+                        "<style>
+                     .report{
+                        table {
+                        font-family: arial, sans-serif;
+                        border-collapse: collapse;
+                        }
+
+                        td, th {
+                        border: 1px solid #dddddd;
+                        text-align: left;
+                        padding: 8px;
+                        }
+
+                     }
+                     
+                     .oddrow {
+                     background-color: #e6ecff;
+                     }
+                     
+                     .evenrow {
+                      background-color: white;
+                     }
+                        
+                        </style>
+                        
+                        <table class = 'report' style = 'width:90%;' >
+                        <tr class = 'oddrow'>
+                        <th style = 'text-align:center;font-size:27px;color:#003366;'colspan='5'>QUANT Sensors</th>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <th>Device Make</th>
+                        <th>Est. Cost (GBP)</th>
+                        <th>Meas.</th>
+                        <th>R2</th>
+                        <th>Summary Report </th>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='3' ><a href='https://www.aeroqual.com/products/aqm-stations'>AQM388</a></td>
+                        <td rowspan='3'>Cost</td>
+                        <td>NO2</td>
+                        <td>R2</td>
+                        <td> report</td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>O3</td>
+                        <td>R2</td>
+                        <td>")),
+                        
+                        downloadButton("AQM388", "Generate report"),
+                        
+                        HTML(paste0(
+                         "</td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>PM2.5</td>
+                        <td>R2</td>
+                        <td> report</td>
+                        </tr>
+                        
+                        <tr class = 'evenrow'>
+                        <td rowspan='3'><a href='https://www.aeroqual.com/products/aqm-stations'>AQM389</a></td>
+                        <td rowspan='3'>Cost</td>
+                        <td>NO2</td>
+                        <td>R2</td>
+                        <td> report</td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>O3</td>
+                        <td>R2</td>
+                        <td> report</td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>PM2.5</td>
+                        <td>R2</td>
+                        <td> report</td>
+                        </tr>
+                        </table>"   
+                        )
+                        )
+                        
+                        
+                   
+                    
+                    ),
             tabItem(tabName="input",
                     h2("Compare your own sampled data"),
                     box(title = "Upload the file of your data",
@@ -162,3 +253,4 @@ p("All devices deployment history"),
         )
     )
 )
+

@@ -123,6 +123,9 @@ plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="refe
         dplyr::select(dplyr::all_of(c(lcs_column, reference_column))) %>%
         setNames(c('lcs', 'reference')) %>%
         dplyr::mutate(error = reference - lcs) %>%
+        # dplyr::mutate(rmse = lapply(data , function(df) sqrt(mean((df$ref - df$lcs)**2, na.rm=T)))) %>%
+        # # rmse = lapply(data, function(df) sqrt(mean((df$ref - df$lcs)**2, na.rm=T)))
+        #  print(rmse)
         ggplot2::ggplot(ggplot2::aes(x=lcs, y=error)) +
         ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", linewidth=0.7) +
         ggpointdensity::geom_pointdensity(na.rm=T) +
@@ -135,6 +138,7 @@ plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="refe
         ggplot2::theme(
             panel.grid.minor = ggplot2::element_blank(),
             axis.title.x = ggplot2::element_text(size=10)
+
         ) +
         ggplot2::labs(x="[LCS]", y="Error (reference - lcs)")
 }
@@ -302,6 +306,8 @@ server <- function(session, input, output) {
             )
             if (input$plottype == 'Evaluation') {
                 suppressMessages(plot_scatter(df, lcs_column="lcs", reference_column="ref") + coord_cartesian())
+                 # rmse = lapply(df, function(dfs) sqrt(mean((dfs$reference_column - dfs$lcs_column)**2, na.rm=T)))
+                 #   print(rmse)
             } else if (input$plottype == 'Diagnostic') {
                 # The geom_smooth message is printed when the plot is rendered, not when
                 # it is generated, unlike the message about overloading the coordinate system
@@ -379,8 +385,12 @@ server <- function(session, input, output) {
                 colnames(df)[colnames(df) == 'lcs'] <- lcs_col
                 colnames(df)[colnames(df) == 'ref'] <- ref_col
                 write.csv(df, con, row.names = FALSE, quote = FALSE)
+             # #  rmse = lapply(data, function(df) sqrt(mean((df$ref - df$lcs)**2, na.rm=T)))
+             #    rmse = lapply(df , sqrt(mean((ref_col - lcs_col)**2, na.rm=T)))
+             #    print(rmse)  
             }
-        )
+
+        )           
     }
     ############################ End functions to dynamically create plots
 
@@ -427,6 +437,7 @@ server <- function(session, input, output) {
                 midpoint = as_date(start) + floor((range)/2)
             )
         instruments_descending <- str_sort(unique(df$instrument), numeric=TRUE, decreasing=TRUE)
+        
         df %>%
             mutate(instrument = factor(instrument, levels=instruments_descending)) %>%
             ggplot(aes(x=midpoint, y=instrument, fill=location, width=range)) +
@@ -591,6 +602,16 @@ server <- function(session, input, output) {
            ggsave(file, outputplot())
        }
    )  
+   
+   output$AQM388 <- downloadHandler(
+       filename = function(){"AQM389.pdf"},
+       
+       content = function(file) {
+            out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document") #, output_file=file)
+            file.rename(out, file)
+       }
+          
+   )
 
 
    #############################

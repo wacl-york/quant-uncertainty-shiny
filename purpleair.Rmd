@@ -1,0 +1,594 @@
+---
+title: "`r params$company_long`"
+output:
+    bookdown::pdf_document2:
+        latex_engine: xelatex
+        keep_tex: false
+        template: template_pa.tex
+        number_sections: true
+params:
+    company_short: "PurpleAir"
+    company_long: "PurpleAir"
+    cals_start_1: "2019-12-10"
+    cals_start_2: "2022-07-08"
+    all_comparison_1_start: "2019-12-10"
+    all_comparison_2_start: "2022-07-08"
+    species: !r c("PM2.5")
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=F, warning=F, dev="pdf", fig.pos="!H")
+options(dplyr.summarise.inform = FALSE)
+library(tidyverse)
+library(lubridate)
+library(odbc)
+library(ggpubr)
+library(cowplot)
+library(ggtext)
+library(knitr)
+library(odbc)
+library(kableExtra)
+library(ggpointdensity)
+library(RColorBrewer)
+library(latex2exp)
+library(quantr)
+```
+
+```{r}
+# Uncertainty and LV are provided in ugm3 and need converting to ppb
+REU_PROPERTIES <- list(
+    "O3" = list(
+        "uncertainty_ugm3"=1.10,
+        "LV_ugm3"=120,
+        "DQO_pct"=30
+    ),
+    "NO2" = list(
+        "uncertainty_ugm3"=0.49,
+        "LV_ugm3"=200,
+        "DQO_pct"=25
+    ),
+    "PM2.5" = list(
+        "uncertainty"=0.48,
+        "LV"=30,
+        "DQO_pct"=50
+    )
+)
+# Using the EC conversion factors at 20C
+# https://uk-air.defra.gov.uk/assets/documents/reports/cat06/0502160851_Conversion_Factors_Between_ppb_and.pdf
+ppb_to_ugm3 <- list(
+    "O3" = 1.9957,
+    "NO2" = 1.9125
+)
+for (gas in c("O3", "NO2")) {
+    REU_PROPERTIES[[gas]][["uncertainty"]] <- REU_PROPERTIES[[gas]][["uncertainty_ugm3"]] / ppb_to_ugm3[[gas]]
+    REU_PROPERTIES[[gas]][["LV"]] <- REU_PROPERTIES[[gas]][["LV_ugm3"]] / ppb_to_ugm3[[gas]]
+}
+```
+
+```{r}
+CALS_1_START <- as_datetime(params$cals_start_1)  # can't directly pass params$cals_start into SQL queries
+CALS_2_START <- as_datetime(params$cals_start_2)  # can't directly pass params$cals_start into SQL queries
+ALL_COMPARISON_1_START <- as_datetime(params$all_comparison_1_start)  # can't directly pass params$cals_start into SQL queries
+ALL_COMPARISON_2_START <- as_datetime(params$all_comparison_2_start)  # can't directly pass params$cals_start into SQL queries
+STUDY_1_END <- as_datetime("2020-03-02 23:59:59")
+STUDY_2_END <- as_datetime("2022-10-31 23:59:59")
+EARLIEST_TIME_1 <- min(CALS_1_START, ALL_COMPARISON_1_START)
+EARLIEST_TIME_2 <- min(CALS_2_START, ALL_COMPARISON_2_START)
+```
+
+```{r}
+# Get handle to the QUANT db where data is stored
+con <- dbConnect(odbc(), "QUANT")
+```
+
+```{r}
+# Find all devices that have data for
+all_devices <- tbl(con, "lcsinstrument") %>% 
+    filter(study == 'QUANT',
+           instrument != 'IMB1') |>  # Device failed in March 2022
+    collect() %>%
+    filter(company == params$company_short) |>
+    arrange(instrument) %>%
+    pull(instrument)
+
+# Create lookup-table with the company's internal device ID
+device_lut <- tbl(con, "lcsinstrument") |>
+    filter(study == 'QUANT') |>
+    select(id=instrument, webid=internalid) |>
+    collect()
+```
+
+```{r}
+retrieve_lcs_data <- function(devices, start, end, species) {
+    df <- tbl(con, "lcs_hourly") %>%
+        filter(instrument %in% devices,
+               time >= start, time <= end,
+               sensornumber == 1,
+               version != 'indoor',
+               measurand %in% species) %>%
+        filter(is.na(flag) | !grepl("Error", flag)) |>
+        select(timestamp=time, instrument, measurand, measurement) |>
+        collect()
+}
+```
+
+```{r}
+# ------ Download data for second time period -------
+# Download LCS data and switch to using the company's internal ID
+lcs_1 <- retrieve_lcs_data(all_devices,
+                         CALS_1_START,
+                         STUDY_1_END,
+                         params$species) %>%
+        inner_join(device_lut, by=c("instrument"="id")) %>%
+        select(-instrument, device=webid) |>
+        mutate(device = factor(device, levels=paste0("PA", 1:10)))
+# Add reference data
+species_to_pull <- params$species
+ref_1 <- tbl(con, "ref_hourly") %>%
+        filter(location == "Manchester",
+               measurand %in% c(species_to_pull, 'Temperature', 'RelHumidity'),
+               time >= EARLIEST_TIME_1, time <= STUDY_1_END) %>%
+        select(timestamp=time, measurand, measurement) %>%
+        collect()
+
+# Combine LCS and Ref
+comb_1 <- lcs_1 %>%
+            full_join(ref_1, by=c("timestamp", "measurand"), suffix=c("_lcs", "_ref"))
+
+# Add all possible hours
+all_hours_1 <- seq.POSIXt(from=CALS_1_START, to=STUDY_1_END, by="1 hour")
+all_hours_df_1 <- expand.grid(timestamp=all_hours_1,
+                         device=device_lut %>% filter(id %in% all_devices) %>% distinct(webid) %>% pull(webid),
+                         measurand=params$species) %>%
+                as_tibble()
+comb_1 <- all_hours_df_1 %>%
+            left_join(comb_1, by=c("timestamp", "device", "measurand")) |>
+            rename(species = measurand, lcs = measurement_lcs, ref = measurement_ref)
+```
+
+```{r}
+# ------ Download data for second time period -------
+# Download LCS data and switch to using the company's internal ID
+lcs_2 <- retrieve_lcs_data(all_devices,
+                         CALS_2_START,
+                         STUDY_2_END,
+                         params$species) %>%
+        inner_join(device_lut, by=c("instrument"="id")) %>%
+        select(-instrument, device=webid) |>
+        mutate(device = factor(device, levels=paste0("PA", 1:10)))
+# Add reference data
+species_to_pull <- params$species
+ref_2 <- tbl(con, "ref") %>%
+        filter(location == "Manchester",
+               measurand %in% c(species_to_pull, 'Temperature', 'RelHumidity'),
+               time >= EARLIEST_TIME_2, time <= STUDY_2_END) %>%
+        select(timestamp=time, measurand, measurement) %>%
+        collect()
+
+# Combine LCS and Ref
+comb_2 <- lcs_2 %>%
+            full_join(ref_2, by=c("timestamp", "measurand"), suffix=c("_lcs", "_ref"))
+
+# Add all possible hours
+all_hours_2 <- seq.POSIXt(from=CALS_2_START, to=STUDY_2_END, by="1 hour")
+all_hours_df_2 <- expand.grid(timestamp=all_hours_2,
+                         device=device_lut %>% filter(id %in% all_devices) %>% distinct(webid) %>% pull(webid),
+                         measurand=params$species) %>%
+                as_tibble()
+comb_2 <- all_hours_df_2 %>%
+            left_join(comb_2, by=c("timestamp", "device", "measurand")) |>
+            rename(species = measurand, lcs = measurement_lcs, ref = measurement_ref)
+```
+
+# QUANT Study
+
+This assessment report provides an overview of the sensor systems provided by `r params$company_long` that were monitored as part of the [QUANT study](https://www.ukcleanair.org/projects/quant-quantification-of-utility-of-atmospheric-network-technologies/). The study aims to perform a transparent long-term evaluation of a subset of commercially available LCS technologies for outdoor air pollution monitoring in background UK urban environments and is focused on key pollutants of interest: nitrogen dioxide (NO2), ozone (O3), and particulate matter (PM). Five commercial sensor device companies elected to participate in the initial study, with a further nine participating from a later date, all of them contributing multiple units with the ability to run continuously and report high time resolution data in near real-time via API. All the devices were deployed at the [Manchester Air Quality Supersite](http://www.cas.manchester.ac.uk/restools/firs/) in December 2019 and were installed as per manufacturer recommendations. The chosen site provides extensive reference measurements in a chemical range representative of UK urban environments. To ensure data integrity, given that all the assessed brands provide and store the data through their own data servers, a daily scrape was performed to transfer the measurement data to a secure server at the University of York. To ensure impartiality and consistency, device calibrations were performed by the manufacturers without any intervention from our team, and all reference data was embargoed until it was released to all manufacturers simultaneously. All data from this study will be made publicly available, along with the wider QUANT data, before February 2023.
+
+If you have any questions please contact Sebastian Diez (`sebastian.diez@york.ac.uk`) or Pete Edwards (`pete.edwards@york.ac.uk`).
+
+## Study period
+
+This report covers the two time-periods when all devices were running at the Manchester Air Quality Supersite (MAQS). The first period runs from the sensor installation on the 10th December 2019, through to the 3rd March 2020 when half the devices were redeployed at other urban monitoring sites in two different UK cities. In July 2022 the devices that had been redeployed elsewhere were relocated at the MAQS until the end of the study in October 2022. Figure \ref{fig:refdens} shows the difference in meteorological conditions between these two time-ranges.
+
+```{r refdens, fig.height=4, fig.width=5, fig.cap="Reference data distributions between the two study periods"}
+ref_2 |>
+    mutate(period = "2") |>
+    rbind(ref_1 |> mutate(period = "1")) |>
+    mutate(period = factor(period, levels=c(1, 2),
+                           labels=c("July 2021 - Jan 2022",
+                                    "March 2022 - June 2022"))) |>
+    ggplot(aes(x=measurement, colour=period, fill=period)) +
+        geom_density(alpha=0.3) +
+        scale_fill_brewer("Time period", palette="Set1") +
+        scale_colour_brewer("Time period", palette="Set1") +
+        facet_wrap(~measurand, scales="free") +
+        labs(x="Measurement (ppb/degree/%)",
+             y="Density") +
+        theme_bw() +
+        theme(legend.position = "bottom")
+```
+
+## Manchester Supersite
+
+The Manchester Air Quality Supersite (MAQS) (located at 53$\text{\textdegree}$ 26' 39.2"N, 2$\text{\textdegree}$ 12' 51.9"W) was chosen because it is one of the largest air quality research facilities in the UK, and also because it is located in the south of the city of Manchester (one of the biggest metropolitan areas in the UK, with approximately 3.3 million inhabitants) in an urban background environment (average winter-time temperature of around 4-5 $\text{\textdegree}$C and \~87% RH; average summer-time temperature of around 16-17 $\text{\textdegree}$C and \~88% RH). The research-grade instrumentation at the MAQS used for this analysis are:
+
+-   NO2: a Cavity Attenuated Phase Shift Spectroscopy (CAPS) NO2 analyzer (Teledyne, T500. Limit of detection \<40 ppt, root mean square "zero" noise \<20 ppt)
+-   O3: a UV photometric O3 analyzer (Thermo Scientific, 49i. Limit of detection \<1.0 ppb, root mean square "zero" noise \<0.25 ppb)
+-   PM: an optical aerosol spectrometer (Palas, FIDAS200. Mass range 0-10000 μ$\text{g/m}^3$, particle size range 0.18-18μm)
+
+There was a fault with the FIDAS in March 2022 resulting in PM2.5 measurements not being available until the 29th March 2022. Furthermore, NO2 and O3 measurements from May 2022 onwards have not undergone ratification, otherwise all other measurements have been ratified.
+
+## Evaluation methodology
+
+No post-processing (for example no outlier removal or corrections) has been applied to the measurement data beyond averaging at an hourly rate to facilitate comparison with the co-located reference data. The species under evaluation are whichever are available out of NO2, O3, and PM2.5 and will be assessed for their accuracy by comparison to reference data by means of 4 methods:
+
+-   A time-series plot allowing for visual inspection of any overall longitudinal trends
+-   A scatter plot assessing the linearity of the sensor system, along with the $R^2$ and Root Mean Square Error (RMSE) summary metrics
+-   A Bland-Altman plot to ascertain the nature of the errors and whether they follow a homoscedastic relationship with respect to the quantity being measured
+-   A plot of the Relative Expanded Uncertainty (REU) along with the relevant Data Quality Objectives (DQO) and Limit Values (LV)
+
+It is important to note that the results displayed in this summary only reflect the performance at the study location and in the study time window, and may be affected by factors external to the LCS system, for example the distance the system is installed from the inlet. Furthermore, the reference data has not been fully ratified during this time-frame. **As such, these results cannot be extrapolated to either future time-periods, alternative field locations, or both.**
+
+## Relative Expanded Uncertainty Parameters
+
+The Relative Expanded Uncertainty (REU) that forms one of the assessment pillars in this report is particularly appealing for its ability to explicitly account for uncertainty in the comparison reference data, rather than treating it as entirely error-free. An additional benefit of the REU is the fact that it is being used by regulatory bodies to provide guidelines for permissible uncertainty (Data Quality Objectives (DQO)) at the designated limit values, which are displayed in Table \ref{tab:reuparams} along with the values used for the inherent uncertainty inherent in the reference instruments.
+
+```{r reuparams, fig.pos="H"}
+tab <- map_dfr(REU_PROPERTIES, identity, .id = "Species") %>%
+    mutate(LV = round(LV),
+           uncertainty=round(uncertainty, 2)) %>%
+    select(Species, LV, DQO_pct, uncertainty) %>%
+    kable("latex", booktabs=TRUE, align=c("l", "c", "c", "c"),
+          col.names = c("Species", "Limit Value (ppb or ug/m3)", "DQO (%)", "Reference instrument uncertainty (ppb or ug/m3)"),
+          escape = TRUE,
+          caption="REU Parameters for O3, NO2, and PM2.5. Limit value and instrument uncertainity units are ppb for NO2 and O3 and ug/m3 for PM2.5") %>%
+    kable_styling(full_width=FALSE, latex_options = "HOLD_position")
+tab
+```
+
+\newpage
+
+# Field Results
+
+## Data availability
+
+Table \ref{tab:avail} summarises the data availability from the deployed low cost sensors in these two assessment periods.
+
+```{r avail, fig.pos="H"}
+earliest_time_1 <- comb_1 |> 
+                    filter(!is.na(lcs)) |>
+                    group_by(device, species) |>
+                    summarise(earliest=min(timestamp)) |>
+                    ungroup()
+earliest_time_2 <- comb_2 |> 
+                    filter(!is.na(lcs)) |>
+                    group_by(device, species) |>
+                    summarise(earliest=min(timestamp)) |>
+                    ungroup()
+                    
+tab_df_1 <- comb_1 %>%
+    inner_join(earliest_time_1, by=c('device', 'species')) |>
+    filter(timestamp >= earliest) |>
+    rename(Device=device) %>%
+    group_by(Device, species) %>%
+    summarise(n_avail = sum(!is.na(lcs), na.rm=T),
+              lab = sprintf("%d (%.1f%%)", n_avail, mean(!is.na(lcs)) * 100)) %>%
+    #filter(n_avail > 0) %>%
+    select(-n_avail) %>%
+    ungroup() %>%
+    mutate(lab = ifelse(is.na(lab), "-", lab),
+           species=factor(species, levels=c("O3", "NO2", "PM2.5"))) %>%
+    pivot_wider(names_from=species, values_from=lab)
+tab_df_2 <- comb_2 %>%
+    inner_join(earliest_time_2, by=c('device', 'species')) |>
+    filter(timestamp >= earliest) |>
+    rename(Device=device) %>%
+    group_by(Device, species) %>%
+    summarise(n_avail = sum(!is.na(lcs), na.rm=T),
+              lab = sprintf("%d (%.1f%%)", n_avail, mean(!is.na(lcs)) * 100)) %>%
+    #filter(n_avail > 0) %>%
+    select(-n_avail) %>%
+    ungroup() %>%
+    mutate(lab = ifelse(is.na(lab), "-", lab),
+           species=factor(species, levels=c("O3", "NO2", "PM2.5"))) %>%
+    pivot_wider(names_from=species, values_from=lab)
+tab_df_1 |>
+    rename(period_1 = PM2.5) |>
+    full_join(tab_df_2 |> rename(period_2 = PM2.5), by="Device") |>
+    mutate(Device = factor(Device, levels=paste0("PA", 1:10)),
+           period_1 = ifelse(is.na(period_1), "0 (0%)", period_1),
+           period_2 = ifelse(is.na(period_2), "0 (0%)", period_2)) |>
+    arrange(Device) |>
+    kable("latex", align=c("l", rep('c', 2)), booktabs=TRUE,
+          col.names = c("Device", "Dec - March 2020", "July - October 2022"),
+          caption="Data availabilty from the low-cost devices. The columns show the number of hours with at least one valid measurement. Six of the units were installed at a later date to the first four, hence having fewer observations.") %>%
+    add_header_above(c(" "=1, "Number of hours of data available"=2)) |>
+    kable_styling(full_width=F, latex_options = "HOLD_position")
+```
+
+```{r}
+plot_species <- function(df, in_species, units, label) {
+    df <- df %>%
+            filter(species == in_species) |>
+            group_by(device) %>%
+            filter(sum(!is.na(lcs)) > 0) %>%  # Drop devies that have no valid measurements for this species
+            ungroup() |>
+            mutate(device = as.factor(device))
+    
+    p_ts <- df %>%
+                pivot_longer(c(lcs, ref), names_to="type") %>%
+                mutate(type = factor(type, levels=c("lcs", "ref"),
+                                     labels=c("LCS", "Reference"))) %>%
+                ggplot() +
+                    geom_line(aes(x=timestamp, y=value, colour=type), na.rm=T, alpha=0.3) +
+                    facet_wrap(~device, ncol=1, drop = TRUE) +
+                    scale_colour_manual("", values=c("Black", "Red")) +
+                    scale_x_datetime(date_labels="%b") +
+                    theme_bw() +
+                    guides(colour="none") +
+                    theme(
+                        panel.grid.minor = element_blank()
+                    ) +
+                    labs(x="", y=sprintf("[%s] (%s)", in_species, units))
+    
+    stats <- df %>%
+        filter(!is.na(lcs), !is.na(ref)) |>
+        group_by(device) %>%
+        nest() %>%
+        mutate(models = lapply(data, function(df) lm(lcs ~ ref, data=df)),
+               eq = lapply(models, function(mod) sprintf("*y* = %.2f*x* %s %.1f", coef(mod)[2], ifelse(sign(coef(mod)[1]) == 1, "+", ""), coef(mod)[1])),
+               r2 = lapply(models, function(mod) summary(mod)$r.squared),
+               rmse = lapply(data, function(df) sqrt(mean((df$ref - df$lcs)**2, na.rm=T)))) %>%
+        unnest(c(r2, rmse, eq)) %>%
+        ungroup() %>%
+        select(device, r2, rmse, eq) %>%
+        mutate(r2 = sprintf("*R*<sup>2</sup> = %.2f", r2),
+               rmse = sprintf("RMSE = %.2f", rmse),
+               lab2 = sprintf("%s<br>%s<br>%s", eq, r2, rmse))
+    
+    p_scatter <- df %>%
+                ggplot(aes(x=ref, y=lcs)) +
+                    geom_pointdensity(na.rm=T) +
+                    geom_abline(slope=1, intercept=0, colour="steelblue", linewidth=0.7) +
+                    geom_smooth(method="lm", colour="red", linewidth=0.7, na.rm=T) +
+                    facet_wrap(~device, ncol=1, drop=TRUE) +
+                    scale_x_continuous(expand=expansion(mult=c(0, 0.75))) +
+                    scale_y_continuous(expand=expansion(mult=c(0, 1.50))) +
+                    geom_richtext(aes(x=-Inf, y=Inf, label=lab2), data=stats, fill=NA, label.color=NA, vjust=1.1, hjust=0, size=4) +
+                    theme_bw() +
+                    scale_colour_viridis_c() +
+                    guides(colour="none") +
+                    theme(
+                        panel.grid.minor = element_blank(),
+                        axis.title.x = element_text(size=10)
+                    ) +
+                    labs(x=sprintf("Reference [%s] (%s)", in_species, units), 
+                         y=sprintf("LCS [%s] (%s)", in_species, units))
+    
+    df_ab <- df %>%
+                mutate(error = ref - lcs, avg = (ref + lcs) / 2) %>%
+                group_by(device) %>%
+                summarise(mean = mean(error, na.rm=T),
+                          sd = sd(error, na.rm=T)) %>%
+                mutate(lower = mean - 1.96 * sd,
+                       upper = mean + 1.96 * sd)
+    
+    p_ab <- df %>%
+                mutate(error = ref - lcs, avg = (ref + lcs) / 2) %>%
+                ggplot(aes(x=avg, y=error)) +
+                    geom_pointdensity(na.rm=T) +
+                    geom_hline(aes(yintercept=lower), data=df_ab, linetype="dashed", colour="red") +
+                    geom_hline(aes(yintercept=mean), data=df_ab, linetype="dashed", colour="steelblue") +
+                    geom_hline(aes(yintercept=upper), data=df_ab, linetype="dashed", colour="red") +
+                    facet_wrap(~device, ncol=1, drop=TRUE) +
+                    scale_colour_viridis_c() +
+                    guides(colour="none") +
+                    theme_bw() +
+                    theme(
+                        panel.grid.minor = element_blank(),
+                        axis.title.x = element_text(size=10)
+                    ) +
+                    labs(x="Average Reference and LCS", y=sprintf("Error (%s)", units))
+    
+    reu_res <- reu(df$ref, df$lcs, u_ref=REU_PROPERTIES[[in_species]][["uncertainty"]])
+    p_reu <- df %>%
+        mutate(reu = ifelse(is.na(lcs) | is.na(ref), NA, reu_res)) |>
+        filter(reu> 0, reu< 200) %>%
+        ggplot(aes(x=ref, y=reu)) +
+            geom_pointdensity() +
+            #stat_smooth(se = FALSE) +
+            geom_vline(xintercept = REU_PROPERTIES[[in_species]][["LV"]], linetype="dashed", colour="red") +
+            geom_hline(yintercept = REU_PROPERTIES[[in_species]][["DQO_pct"]], linetype="dashed", colour="steelblue") +
+            scale_colour_viridis_c() +
+            guides(colour="none") +
+            facet_wrap(~device, ncol=1, drop=TRUE) +
+            ylim(0, 200) +
+            labs(x=sprintf("Reference [%s] (%s)", in_species, units), 
+                 y="REU (%)") +
+            theme_bw() +
+            theme(
+                axis.title.x = element_text(size=10)
+            )
+    
+    p <- plot_grid(p_ts, p_scatter, p_ab, p_reu, ncol=4)
+    title <- ggdraw() + draw_label(label, fontface="bold")
+    plot_grid(title, p, ncol=1, rel_heights=c(0.05, 1))
+}
+```
+
+\newpage
+
+## December to March 2020
+
+```{r, fig.height=8, fig.width=9, fig.cap="Evaluation for units 1-5. Column 1: Time-series. LCS measurements (black) alongside reference (red). Column 2: Scatter plot. Blue and red lines are 1:1 and linear regression fit respectively. Column 3: Bland-Altman plot. Blue line indicates mean error and the red lines represent 2 standard deviations. Column 4: Relative Expanded Uncertainty (REU). LV and DQO are shown by dashed red and blue lines respectively. The blue solid line shows a non-linear line of best fit."}
+if (comb_1 %>% filter(species == "PM2.5", !is.na(lcs)) %>% nrow() > 1) {
+    plot_species(comb_1 |> filter(device %in% c('PA1', 'PA2', 'PA3', 'PA4', 'PA5')), "PM2.5", "ug/m3",
+                 label="Dec-March 2020 (first 5 devices)")
+}
+```
+
+```{r, results='asis'}
+if (comb_1 %>% filter(species == "PM2.5", !is.na(lcs)) %>% nrow() == 0) {
+    cat("No data available for this pollutant")
+}
+```
+
+\newpage
+
+```{r, fig.height=8, fig.width=9, fig.cap="Evaluation for units 6-10. Column 1: Time-series. LCS measurements (black) alongside reference (red). Column 2: Scatter plot. Blue and red lines are 1:1 and linear regression fit respectively. Column 3: Bland-Altman plot. Blue line indicates mean error and the red lines represent 2 standard deviations. Column 4: Relative Expanded Uncertainty (REU). LV and DQO are shown by dashed red and blue lines respectively. The blue solid line shows a non-linear line of best fit."}
+if (comb_1 %>% filter(species == "PM2.5", !is.na(lcs)) %>% nrow() > 1) {
+    plot_species(comb_1 |> filter(device %in% c('PA6', 'PA7', 'PA8', 'PA9', 'PA10')), "PM2.5", "ug/m3",
+                 "Dec-March 2020 (second five devices)")
+}
+```
+
+```{r, results='asis'}
+if (comb_1 %>% filter(species == "PM2.5", !is.na(lcs)) %>% nrow() == 0) {
+    cat("No data available for this pollutant")
+}
+```
+
+\newpage
+
+## July - October 2022
+
+```{r, fig.height=8, fig.width=9, fig.cap="Evaluation for the remaining 5 devices. Column 1: Time-series. LCS measurements (black) alongside reference (red). Column 2: Scatter plot. Blue and red lines are 1:1 and linear regression fit respectively. Column 3: Bland-Altman plot. Blue line indicates mean error and the red lines represent 2 standard deviations. Column 4: Relative Expanded Uncertainty (REU). LV and DQO are shown by dashed red and blue lines respectively. The blue solid line shows a non-linear line of best fit."}
+if (comb_2 %>% filter(species == "PM2.5", !is.na(lcs)) %>% nrow() > 1) {
+    plot_species(comb_2, "PM2.5", "ug/m3", label="July-Oct 2022 (all functioning devices)")
+}
+```
+
+```{r, results='asis'}
+if (comb_2 %>% filter(species == "PM2.5", !is.na(lcs)) %>% nrow() == 0) {
+    cat("No data available for this pollutant")
+}
+```
+
+\newpage
+
+# Comparison with other study participants
+
+This section places the above results into the context of the full study by showing the performance metrics of all deployed low-cost sensor systems from the main QUANT study of five commerical products across these two time-ranges. Figure \ref{fig:bothstudycomp} shows the performance of all participants according to their RMSE and R2 with the first evaluation period denoted by a circle and the second by a triangle. This comparison is provided solely as an illustrative figure and is **not** intended to be used as an exhaustive comparison, nor is it suitable for this purpose owing to the fact that this timeframe comprises non-overlapping recording periods and discrepencies regarding which calibrations have been applied.
+
+```{r}
+# Get device IDs of all WP devices
+device_ids <- tbl(con, "lcsinstrument") %>%
+                filter(company != 'RLS',
+                       instrument != 'IMB1',  # Device failed March 2022
+                       study == 'QUANT') |>
+                select(device=instrument, company, webid=internalid) %>%
+                collect()
+
+evaluate_device <- function(device, start, end, reference) {
+    lcs_df <- retrieve_lcs_data(device, start, end, params$species)
+    lcs_df %>%
+         left_join(reference, by=c("timestamp", "measurand"), suffix=c("_lcs", "_ref")) %>%
+         group_by(measurand) %>%
+         summarise(rmse = sqrt(mean((measurement_lcs - measurement_ref)**2, na.rm=T)),
+                   r2 = cor(measurement_ref, measurement_lcs, use="na.or.complete")**2) |>
+        rename(species=measurand)
+}
+
+results <- device_ids %>%
+    filter(device != 'Ari063') %>%
+    split(.$device) %>%
+    map_dfr(function(x) evaluate_device(x$device, ALL_COMPARISON_2_START, STUDY_2_END, ref_2), .id="device")
+
+# Add manufacturer names, flag if the current manufacturer
+# And add the web-ready device id
+results <- results %>%
+    inner_join(device_ids, by="device") |>
+    mutate(this_manufacturer = company == params$company_short) %>%
+    select(-device) %>%
+    rename(device=webid)
+
+# Remove species that aren't measured by this company
+species_to_keep <- results %>%
+    filter(this_manufacturer, !is.na(rmse)) %>%
+    distinct(species) %>%
+    pull(species)
+
+results <- results %>%
+            filter(species %in% species_to_keep)
+
+# Get a handle to this company's device IDs (in webid format)
+these_devices <- results %>%
+                    filter(this_manufacturer) %>%
+                    distinct(device) %>%
+                    pull(device)
+```
+
+```{r}
+results_1 <- device_ids %>%
+    split(.$device) %>%
+    map_dfr(function(x) evaluate_device(x$device, ALL_COMPARISON_1_START, STUDY_1_END, ref_1), .id="device")
+
+# Add manufacturer names, flag if the current manufacturer
+# And add the web-ready device id
+results_1 <- results_1 %>%
+    inner_join(device_ids, by="device") |>
+    mutate(this_manufacturer = company == params$company_short) %>%
+    select(-device) %>%
+    rename(device=webid)
+
+# Remove species that aren't measured by this company
+species_to_keep_1 <- results_1 %>%
+    filter(this_manufacturer, !is.na(rmse)) %>%
+    distinct(species) %>%
+    pull(species)
+
+results_1 <- results_1 %>%
+            filter(species %in% species_to_keep)
+
+# Get a handle to this company's device IDs (in webid format)
+these_devices_1 <- results_1 %>%
+                    filter(this_manufacturer) %>%
+                    distinct(device) %>%
+                    pull(device)
+```
+
+```{r bothstudycomp, fig.width=8, fig.height=8, fig.cap="RMSE and R2 of all devices between the first evaluation period (circle marker) and the second evaluation period (triangle marker)"}
+all_res <- results |>
+    mutate(study_period=2) |>
+    rbind(results_1 |> mutate(study_period=1)) |>
+    mutate(study_period = factor(study_period, levels=c(1, 2))) |>
+    arrange(study_period)
+
+device_ord <- all_res %>%
+    distinct(device, this_manufacturer) %>%
+    mutate(device = factor(device, levels=str_sort(device, numeric = TRUE))) |>
+    arrange(desc(this_manufacturer), device) |>
+    mutate(device = as.character(device)) |>
+    pull(device)
+# Swa
+
+all_res$device <- factor(all_res$device, levels=device_ord)
+
+all_res |>
+    ggplot(aes(x=r2, y=rmse, group=device)) +
+        geom_point(aes(fill=device, alpha=this_manufacturer, size=this_manufacturer, shape=study_period), na.rm=T) +
+        geom_path(arrow=arrow(length=unit(0.2, "cm"), ends="last", type="open"),
+                  linewidth=0.2,
+                  alpha=0.8) +
+        scale_shape_manual("", values=c(21, 24)) +
+        scale_fill_manual("LCS",
+                            values=c(brewer.pal(length(union(these_devices, these_devices_1)), "Set1"),
+                                     rep("black", length(device_ord) - length(union(these_devices, these_devices_1)))),
+                            limits=paste0("PA", 1:10)) +
+        scale_alpha_manual(values=c(0.5, 1)) +
+        scale_size_manual(values=c(2, 3.0)) +
+        scale_x_reverse() +
+        guides(alpha="none", size="none", shape="none",
+               fill = guide_legend(override.aes=list(shape = 21, size=3))) +
+        theme_bw() +
+        xlim(1, 0.0) +
+        theme(legend.position = "bottom") +
+        labs(y=TeX(r"(RMSE (ppb/$\mu gm^{-3}$) )"), x=TeX(r"($R^2$)"))
+```
+
+```{r}
+dbDisconnect(con)
+```
