@@ -5,14 +5,15 @@ date: "2024-07-10"
 
 params:
     device: "AQM388"
-    pollutant: "O3"
+    pollutant: "PM2.5"
     cal_version: "cal1"
 ---
 
 # AQM388
-## O3
+## PM2.5
 
-```{r}
+## rmse
+```{r echo=FALSE}
 
  
 library(DBI)
@@ -100,5 +101,25 @@ lcs |> r_rmse(ref_lcs)
 
 
 ```
+## plot measurements vs reference measurements
 
+```{r echo=FALSE}
 
+#plot_scatter(lcs, lcs_column="lcsmeas", reference_column="refmeas") + coord_cartesian()
+
+ggplot(data=lcs, mapping = aes(x=refmeas, y=lcsmeas)) +geom_point()
+
+```
+
+## r squared
+
+```{r echo=FALSE}
+model <- lm(lcsmeas ~ refmeas, data = lcs)
+summary(model)$r.squared
+```
+
+## equation
+
+```{r echo=FALSE}
+sprintf("y = %.2fx %s %.1f", coef(model)[2], ifelse(sign(coef(model)[1]) == 1, "+", ""), coef(model)[1])
+```

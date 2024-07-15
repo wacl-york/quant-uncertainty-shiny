@@ -306,8 +306,6 @@ server <- function(session, input, output) {
             )
             if (input$plottype == 'Evaluation') {
                 suppressMessages(plot_scatter(df, lcs_column="lcs", reference_column="ref") + coord_cartesian())
-                 # rmse = lapply(df, function(dfs) sqrt(mean((dfs$reference_column - dfs$lcs_column)**2, na.rm=T)))
-                 #   print(rmse)
             } else if (input$plottype == 'Diagnostic') {
                 # The geom_smooth message is printed when the plot is rendered, not when
                 # it is generated, unlike the message about overloading the coordinate system
@@ -608,7 +606,7 @@ server <- function(session, input, output) {
        
        content = function(file) {
             out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document",
-                                     params = list(device = "AQM388", pollutant = "O3", cal_version = "cal1")) #, output_file=file)
+                                     params = list(device = "AQM388", pollutant = "PM2.5", cal_version = "cal1")) #, output_file=file)
             file.rename(out, file)
        }
           
