@@ -4,13 +4,13 @@ output: pdf_document
 date: "2024-07-10"
 
 params:
-    device: "AQM388"
-    pollutant: "PM2.5"
+    device: !r c("AQM388", "AQM389", "AQM390", "AQM391")
+    pollutant: "NO2"
     cal_version: "cal1"
 ---
 
 # AQM388
-## PM2.5
+## NO2
 
 ## rmse
 ```{r echo=FALSE}
@@ -52,34 +52,9 @@ con <- dbConnect(Postgres(),
                      user=CREDS$username,
                      password=CREDS$password)
 
-#download_data <- function(con 
-                          # device,
-                          # pollutant,
-                          # in_avg,
-                          # in_start,
-                          # in_end,
-                          # in_sensornumber,
-                          # cal_version,
-                          # met_variables,
-                          # time_variables
-#                          ) 
-#                          {
-
-
- # in_instrument <- "AQM388"
- # in_pollutant <- "NO2"
- # in_cal <- "cal1"
-
-# lcs <- tbl(con, "lcs_hourly") %>%
-#         filter(instrument == in_instrument,
-#                measurand == in_pollutant,
-#                version == in_cal,
-#                is.na(flag) | flag != 'Error') %>%
-#         rename(lcsmeas = measurement)
-
  
 lcs <- tbl(con, "lcs_hourly") |>
-        filter(instrument == params$device,
+        filter(instrument %in% params$device,
                measurand == params$pollutant,
                version == params$cal_version,
                is.na(flag) | flag != 'Error') %>%
@@ -91,35 +66,370 @@ lcs <- lcs |>
 
 lcs <- lcs |>
     mutate(ref_lcs = refmeas - lcsmeas)
-
-r_rmse <- function(data, val) {
-data |> summarize(rmse = sqrt(mean({{val}}**2, na.rm=T)))
-}
-lcs |> r_rmse(ref_lcs)
-
-#}
-
-
 ```
-## plot measurements vs reference measurements
 
 ```{r echo=FALSE}
 
-#plot_scatter(lcs, lcs_column="lcsmeas", reference_column="refmeas") + coord_cartesian()
+r_rmse <- function(data, val) {
+data |> summarize(rmse = sqrt(mean({{val}}**2, na.rm=T)))
 
-ggplot(data=lcs, mapping = aes(x=refmeas, y=lcsmeas)) +geom_point()
+}
+
+r_rmse_loc <- function(data, location, loc_val, val){
+    data <- data |> filter(location == loc_val)
+    data |> summarize(rmse = sqrt(mean({{val}}**2, na.rm=T)))
+}
+
+rmse_sig <- function(rmse){
+  signif((dplyr::pull(rmse, "rmse")), digits = 3)  
+}
+
+for (i in params$device){
+ print(lcs |> filter(instrument == i)|> r_rmse(ref_lcs))
+}
+
+for(i in params$device){
+    location_dep <- lcs |> filter(instrument == i)
+   print(r_rmse_loc(location_dep, location, "Manchester", ref_lcs))
+
+
+    if (any(dplyr::pull(location_dep, "location") == "York")){
+     print(r_rmse_loc(location_dep, location, "York", ref_lcs))
+    }
+    else if (any(dplyr::pull(location_dep, "location") == "London")){
+     print(r_rmse_loc(location_dep, location, "London", ref_lcs))
+    }
+
+}
+
 
 ```
 
 ## r squared
 
-```{r echo=FALSE}
-model <- lm(lcsmeas ~ refmeas, data = lcs)
-summary(model)$r.squared
+```{r}
+
+r2_sig <- function(val){
+    signif(val, digits = 3)  
+}
+
+r_squared <- function(lcsmeas, refmeas, data, location, loc_val){
+    model <- lm(lcsmeas ~ refmeas, data = data)
+    return(summary(model)$r.squared)
+}
+
+r_squared_loc <- function(lcsmeas, refmeas, location_dep, location, loc_val){
+    model <- lm(lcsmeas ~ refmeas, data = location_dep, subset = (location == loc_val))
+    return(summary(model)$r.squared)
+}
+
+for(i in params$device){
+    lcs_r2 <- lcs |> filter(instrument == i)
+    r2 <- r_squared(lcsmeas, refmeas, lcs_r2)
+    print(paste(i, r2))
+}
+
+
+for(i in params$device){
+    location_dep <- lcs |> filter(instrument == i)
+    
+    r2 <- r_squared_loc(lcsmeas, refmeas, location_dep, location, "Manchester")
+    
+# model <- lm(lcsmeas ~ refmeas, data = location_dep, subset = (location == "Manchester"))
+ print(paste(i, "Manchester", r2))
+
+    if (any(dplyr::pull(location_dep, "location") == "York")){
+     # model <- lm(lcsmeas ~ refmeas, data = location_dep, subset = (location == "York"))
+      r2 <- r_squared_loc(lcsmeas, refmeas, location_dep, location, "York")
+      print(paste(i, "York", r2))
+    } 
+    else if(any(dplyr::pull(location_dep, "location") == "London")){
+# model <- lm(lcsmeas ~ refmeas, data = location_dep, subset = (location == "London"))
+# print(paste(i, "London", summary(model)$r.squared))
+
+      r2 <- r_squared_loc(lcsmeas, refmeas, location_dep, location, "London")
+      print(paste(i, "London", r2))
+    }
+
+}
+
 ```
 
 ## equation
 
 ```{r echo=FALSE}
-sprintf("y = %.2fx %s %.1f", coef(model)[2], ifelse(sign(coef(model)[1]) == 1, "+", ""), coef(model)[1])
+
+equation_loc <- function(lcsmeas, refmeas, location_dep, location, loc_val){
+   eqmodel <- lm(lcsmeas ~ refmeas, data = location_dep, subset = (location == loc_val))
+return(sprintf("y = %.2fx %s %.1f", coef(eqmodel)[2], ifelse(sign(coef(eqmodel)[1]) == 1, "+", ""), coef(eqmodel)[1]))
+}
+
+equation_f <- function(lcsmeas, refmeas, lcs_equation){
+   eqmodel <- lm(lcsmeas ~ refmeas, data = lcs_equation)
+return(sprintf("y = %.2fx %s %.1f", coef(eqmodel)[2], ifelse(sign(coef(eqmodel)[1]) == 1, "+", ""), coef(eqmodel)[1]))
+}
+
+for(i in params$device){
+    lcs_equation <- lcs |> filter(instrument == i)
+    equation <- equation_f(lcsmeas, refmeas, lcs_equation)
+    print(paste(i, equation))
+    
+#eqmodel <- lm(lcsmeas ~ refmeas, data = lcs, subset = instrument == i)
+#print(paste(i, sprintf("y = %.2fx %s %.1f", coef(eqmodel)[2], ifelse(sign(coef(eqmodel)[1]) == 1, "+", ""), coef(eqmodel)[1])))
+
+}
+
+for(i in params$device){
+    location_dep <- lcs |> filter(instrument == i)
+    
+    equation <- equation_loc(lcsmeas, refmeas, location_dep, location, "Manchester")
+    print(paste(i, "Manchester", equation, sep=" "))
+    
+# eqmodel <- lm(lcsmeas ~ refmeas, data = location_dep, subset = (instrument == i & location == "Manchester"))
+# print(paste(i, "Manchester", sprintf("y = %.2fx %s %.1f", coef(eqmodel)[2], ifelse(sign(coef(eqmodel)[1]) == 1, "+", ""), coef(eqmodel)[1])))
+ 
+    if (any(dplyr::pull(location_dep, "location") == "York")){
+        
+        equation <- equation_loc(lcsmeas, refmeas, location_dep, location, "York")
+    print(paste(i, "York", equation, sep=" "))
+        
+#         location_york <- location_dep |> filter(location == "York")
+# eqmodel <- lm(lcsmeas ~ refmeas, data = location_york, subset = instrument == i)
+# print(paste(i, "York", sprintf("y = %.2fx %s %.1f", coef(eqmodel)[2], ifelse(sign(coef(eqmodel)[1]) == 1, "+", ""), coef(eqmodel)[1])))
+    } 
+    else if(any(dplyr::pull(location_dep, "location") == "London")){
+        
+        equation <- equation_loc(lcsmeas, refmeas, location_dep, location, "London")
+    print(paste(i, "London", equation, sep=" "))
+        
+# eqmodel <- lm(lcsmeas ~ refmeas, data = location_dep, subset = instrument == i)
+# print(paste(i, "London", sprintf("y = %.2fx %s %.1f", coef(eqmodel)[2], ifelse(sign(coef(eqmodel)[1]) == 1, "+", ""), coef(eqmodel)[1])))
+    } 
+
+}
+
+```
+
+
+## plot measurements vs reference measurements
+
+```{r echo=FALSE}
+devices <- params$device
+info <- ""
+
+information_plot <- function(devices, data, instrument, ref_lcs, lcsmeas, refmeas){
+ for (i in devices){
+   instrum_dep <- data |> filter(instrument == i)
+   rmse <- r_rmse(instrum_dep, ref_lcs)
+   rmse <- rmse_sig(rmse)
+   equation <- equation_f(lcsmeas, refmeas, instrum_dep) 
+
+info <- c(info, paste(equation, "RMSE = ", rmse, sep = " "))
+ }   
+#info <- matrix(info, nrow=5) 
+return(info)
+}
+
+#information_plot(devices, lcs, instrument, ref_lcs, lcsmeas, refmeas)
+
+
+
+ggplot2::ggplot(data=lcs, mapping = aes(x=refmeas, y=lcsmeas, color=instrument)) + geom_point(alpha = 0.1) +  geom_smooth(method=lm, se=FALSE, mapping = aes(color=instrument)) +
+    annotate(geom="text", x=20, y=90, label=information_plot(devices, lcs, instrument, ref_lcs, lcsmeas, refmeas)[2])+
+    annotate(geom="text", x=20, y=97, label=information_plot(devices, lcs, instrument, ref_lcs, lcsmeas, refmeas)[3])+
+    annotate(geom="text", x=20, y=104, label=information_plot(devices, lcs, instrument, ref_lcs, lcsmeas, refmeas)[4])+
+    annotate(geom="text", x=20, y=111, label=information_plot(devices, lcs, instrument, ref_lcs, lcsmeas, refmeas)[5])+
+   # geom_label(label = information_plot(devices, lcs, instrument, ref_lcs, lcsmeas, refmeas))+
+   # geom_text(aes(label = "text"))
+            ggplot2::theme_bw()
+
+ggplot2::ggplot(data=lcs, mapping = aes(x=refmeas, y=lcsmeas, color=instrument)) + geom_point() +
+            ggplot2::theme_bw() +
+    facet_wrap(~instrument) + 
+    theme(legend.position="none")
+
+#####################################################################################
+
+for (i in params$device){
+  location_dep <- lcs |> filter(instrument == i) 
+  
+# r_rmse_loc(location_dep, location, "Manchester", ref_lcs)
+  
+location_manch <- location_dep|> filter(location == "Manchester")  
+#rmse <- location_manch |> r_rmse(ref_lcs)
+#rmse_manch <- signif((dplyr::pull(rmse, "rmse")), digits = 3) 
+ 
+rmse <- r_rmse_loc(location_dep, location, "Manchester", ref_lcs)
+rmse_manch <- rmse_sig(rmse)
+
+r2 <- r_squared_loc(lcsmeas, refmeas, location_dep, location, "Manchester")
+r2 <- r2_sig(r2)
+
+equation <- equation_loc(lcsmeas, refmeas, location_dep, location, "Manchester")
+
+
+plot <- ggplot2::ggplot(data = location_manch, mapping = aes(x=refmeas, y=lcsmeas, color=location)) + geom_point(alpha = 0.2) +          geom_smooth(method=lm, se=FALSE) +
+            ggplot2::theme_bw() +
+      facet_wrap(~instrument) +
+    annotate(geom="text",x=20,y=70, label=paste("RMSE =", rmse_manch, sep=" "))+ annotate(geom="text",x=20,y=75, label=paste("R2 =", r2, sep=" ")) + annotate(geom="text",x=20,y=80, label= equation)
+
+
+print(plot)
+   
+if (any(dplyr::pull(location_dep, "location") == "York")){
+    
+ location_dep <- location_dep|> filter(location == "York")
+# rmse <- location_york |> r_rmse(ref_lcs)
+# rmse_york <- signif((dplyr::pull(rmse, "rmse")), digits = 3)
+
+rmse <- r_rmse_loc(location_dep, location, "York", ref_lcs)
+rmse_york <- rmse_sig(rmse)
+
+r2 <- r_squared_loc(lcsmeas, refmeas, location_dep, location, "York")
+r2 <- r2_sig(r2)
+
+equation <- equation_loc(lcsmeas, refmeas, location_dep, location, "York")
+
+plot <- ggplot2::ggplot(data = location_dep, mapping = aes(x=refmeas, y=lcsmeas, color=location)) + geom_point(alpha = 0.2) +          geom_smooth(method=lm, se=FALSE) +
+            ggplot2::theme_bw() +
+      facet_wrap(~instrument) +
+    annotate(geom="text",x=20,y=70, label=paste("RMSE =", rmse_york, sep=" ")) + annotate(geom="text",x=20,y=75, label=paste("R2 =", r2, sep=" ")) + annotate(geom="text",x=20,y=80, label= equation)
+
+
+
+print(plot)
+   
+} else if (any(dplyr::pull(location_dep, "location") == "London")){
+ # rmse <- location_lond |> r_rmse(ref_lcs)                           ##find the rmse for the plot
+# rmse_lond <- signif((dplyr::pull(rmse, "rmse")), digits = 3)  
+    
+ location_dep <- location_dep|> filter(location == "London")
+
+rmse <- r_rmse_loc(location_dep, location, "London", ref_lcs)
+rmse_lond <- rmse_sig(rmse)
+
+r2 <- r_squared_loc(lcsmeas, refmeas, location_dep, location, "London")
+r2 <- r2_sig(r2)
+
+equation <- equation_loc(lcsmeas, refmeas, location_dep, location, "London")
+
+
+plot <- ggplot2::ggplot(data = location_dep, mapping = aes(x=refmeas, y=lcsmeas, color=location)) + geom_point(alpha = 0.2) +         geom_smooth(method=lm, se=FALSE) +
+            ggplot2::theme_bw() +
+      facet_wrap(~instrument)  +
+    annotate(geom="text",x=20,y=70, label=paste("RMSE =", rmse_lond, sep=" ")) + annotate(geom="text",x=20,y=75, label=paste("R2 =", r2, sep=" ")) + annotate(geom="text",x=20,y=80, label= equation) 
+
+print(plot)
+   
+}
+
+}
+
+
+```
+
+
+
+
+
+```{r echo=FALSE}
+
+# ggplot2::ggplot(data=lcs, mapping = aes(x=time, y=lcsmeas, color = instrument)) +geom_line()  +
+#             ggplot2::theme_bw()
+# 
+# ggplot2::ggplot(data=lcs, mapping = aes(x=time, y=lcsmeas, color = instrument)) +geom_line()  +
+#             ggplot2::theme_bw() +
+#     facet_wrap(~instrument) + 
+#     theme(legend.position="none")
+
+```
+
+## CRMSE and bias
+```{r echo=FALSE}
+
+crmse_f <- function(data, rows, refmeas, lcsmeas){
+   crmse <- data|> cross_join(rows) |> mutate(pred_mean = mean(refmeas, na.rm=T),act_mean = mean(lcsmeas, na.rm=T),crmse1 = inverse*(((sum(refmeas - pred_mean)) - (sum(lcsmeas - act_mean)))**2)) |> summarise(crmse= sqrt(crmse1)) |> distinct(crmse) 
+   return(crmse)
+}
+
+bias_f <- function(data, ref_lcs, data2, inverse){
+    sum_ref_lcs <- data |> summarize(sum = abs(sum(ref_lcs)))
+    bias <- data2 |> cross_join(sum_ref_lcs) |> summarize(bias = (inverse)*sum)
+    return(bias)
+}
+
+lcs_instrum <- lcs |> filter(instrument == "AQM388" )
+
+rows <- count(lcs_instrum) |> mutate(inverse = 1/n)
+
+crmse <- crmse_f(lcs_instrum, rows, refmeas, lcsmeas)
+
+bias <- bias_f(lcs_instrum, ref_lcs, rows, inverse)
+
+AQM388_accuracy <- cross_join(crmse, bias) |> mutate(device = "AQM388", .before = 1)
+
+###############################################################################
+
+lcs_instrum <- lcs |> filter(instrument == "AQM389" )
+
+rows <- count(lcs_instrum) |> mutate(inverse = 1/n)
+
+crmse <- crmse_f(lcs_instrum, rows, refmeas, lcsmeas)
+bias <- bias_f(lcs_instrum, ref_lcs, rows, inverse)
+
+
+AQM389_accuracy <- cross_join(crmse, bias) |> mutate(device = "AQM389", .before = 1)
+
+######################################################################################################
+lcs_instrum <- lcs |> filter(instrument == "AQM390" )
+
+rows <- count(lcs_instrum) |> mutate(inverse = 1/n)
+
+crmse <- crmse_f(lcs_instrum, rows, refmeas, lcsmeas)
+bias <- bias_f(lcs_instrum, ref_lcs, rows, inverse)
+
+
+AQM390_accuracy <- cross_join(crmse, bias) |> mutate(device = "AQM390", .before = 1)
+
+#################################################################################################################
+lcs_instrum <- lcs |> filter(instrument == "AQM391" )
+
+rows <- count(lcs_instrum) |> mutate(inverse = 1/n)
+
+crmse <- crmse_f(lcs_instrum, rows, refmeas, lcsmeas)
+bias <- bias_f(lcs_instrum, ref_lcs, rows, inverse)
+
+
+AQM391_accuracy <- cross_join(crmse, bias) |> mutate(device = "AQM391", .before = 1)
+
+
+
+accuracy <- merge(AQM388_accuracy, AQM389_accuracy,  by=c("device", "crmse", "bias"), all.x = TRUE, all.y=TRUE)
+accuracy <- merge(accuracy, AQM390_accuracy, by=c("device", "crmse", "bias"), all.x = TRUE, all.y=TRUE)
+accuracy <- merge(accuracy, AQM391_accuracy, by=c("device", "crmse", "bias"), all.x = TRUE, all.y=TRUE)
+
+
+ggplot2::ggplot(accuracy, mapping = aes(x = crmse, y = bias, color = device)) + geom_point()  +
+             ggplot2::theme_bw()  
+
+
+```
+
+## Accuracy
+
+A = 100 - (abs(sensor mean - reference mean)/ reference mean) * 100
+
+```{r echo=FALSE}
+
+for (i in params$device) {
+    lcs_instrum <- lcs |> filter(instrument == i)
+    
+    lcs_instrum_acc <- lcs_instrum |> summarise(lcs_mean = mean(lcsmeas, na.rm = T), ref_mean = mean(refmeas, na.rm = T))
+    lcs_instrum_acc <- lcs_instrum_acc |> mutate(accuracy = 100-(abs(lcs_mean - ref_mean)/ref_mean)*100)
+    
+    print(dplyr::pull(lcs_instrum_acc, "accuracy"))
+    print(lcs_instrum_acc)
+    
+}
+
 ```

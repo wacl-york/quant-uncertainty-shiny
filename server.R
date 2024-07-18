@@ -123,9 +123,6 @@ plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="refe
         dplyr::select(dplyr::all_of(c(lcs_column, reference_column))) %>%
         setNames(c('lcs', 'reference')) %>%
         dplyr::mutate(error = reference - lcs) %>%
-        # dplyr::mutate(rmse = lapply(data , function(df) sqrt(mean((df$ref - df$lcs)**2, na.rm=T)))) %>%
-        # # rmse = lapply(data, function(df) sqrt(mean((df$ref - df$lcs)**2, na.rm=T)))
-        #  print(rmse)
         ggplot2::ggplot(ggplot2::aes(x=lcs, y=error)) +
         ggplot2::geom_abline(slope=0, intercept=0, colour="steelblue", linewidth=0.7) +
         ggpointdensity::geom_pointdensity(na.rm=T) +
@@ -606,7 +603,7 @@ server <- function(session, input, output) {
        
        content = function(file) {
             out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document",
-                                     params = list(device = "AQM388", pollutant = "PM2.5", cal_version = "cal1")) #, output_file=file)
+                                     params = list(device = "AQM388", pollutant = "NO2", cal_version = "cal1")) #, output_file=file)
             file.rename(out, file)
        }
           
