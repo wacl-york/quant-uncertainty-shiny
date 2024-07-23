@@ -603,12 +603,29 @@ server <- function(session, input, output) {
        
        content = function(file) {
             out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document",
-                                     params = list(device = "AQM388", pollutant = "NO2", cal_version = "cal1")) #, output_file=file)
+                                     params = list(device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "NO2", cal_version = "cal1")) #, output_file=file)
             file.rename(out, file)
        }
           
    )
 
+   output$AQMeshNO2 <- downloadHandler(
+       filename = function(){"AQMeshNO2.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("AQMesh.Rmd", output_format = "pdf_document",
+                                    params = list(device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "NO2", cal_version = c("cal1", "cal2"))) #, output_file=file)
+           file.rename(out, file)
+       }
+   )
+   
+   output$AQMeshO3 <- downloadHandler(
+       filename = function(){"AQMeshO3.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("AQMesh.Rmd", output_format = "pdf_document",
+                                    params = list(device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "O3", cal_version = c("cal1", "cal2"))) #, output_file=file)
+           file.rename(out, file)
+       }
+   )
 
    #############################
          

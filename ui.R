@@ -88,15 +88,19 @@ ui <- dashboardPage(
                         <td rowspan='3' ><a href='https://www.aeroqual.com/products/aqm-stations'>AQM388</a></td>
                         <td rowspan='3'>Cost</td>
                         <td>NO2</td>
-                        <td>R2</td>
-                        <td> report</td>
+                        <td>R2</td><td>")),
+                    
+                    downloadButton("AQMeshNO2", "Generate NO2 report"),
+                    
+                    HTML(paste0("
+                         </td>
                         </tr>
                         <tr class = 'oddrow'>
                         <td>O3</td>
                         <td>R2</td>
                         <td>")),
                         
-                        downloadButton("AQM388", "Generate report"),
+                        downloadButton("AQMeshO3", "Generate O3 report"),
                         
                         HTML(paste0(
                          "</td>
@@ -104,7 +108,12 @@ ui <- dashboardPage(
                         <tr class = 'oddrow'>
                         <td>PM2.5</td>
                         <td>R2</td>
-                        <td> report</td>
+                        <td> ")),
+                    
+                    downloadButton("AQMeshPM2.5", "Generate PM2.5 report"),
+                    
+                    HTML(paste0(
+                        "</td>
                         </tr>
                         
                         <tr class = 'evenrow'>
@@ -112,7 +121,7 @@ ui <- dashboardPage(
                         <td rowspan='3'>Cost</td>
                         <td>NO2</td>
                         <td>R2</td>
-                        <td> report</td>
+                        <td> </td>
                         </tr>
                         <tr class = 'evenrow'>
                         <td>O3</td>
