@@ -1,20 +1,44 @@
 ---
-title: "AQMesh"
-output: pdf_document
-date: "2024-07-22"
-
+title: "AQMesh `r params$pollutant`"
+toc: true
+theme: united
+output: 
+  pdf_document:
+    includes:
+      in_header: "preamble.tex"
 params:
     device: !r c("AQM388", "AQM389", "AQM390", "AQM391")
-    pollutant: ""
+    pollutant: "NO2"
     cal_version: !r c("cal1","cal2")
     start: "2019-12-10"
     end: "2022-10-31"
 ---    
 
-# AQMesh
+[^note]: this is a test
+
+\newpage
+
+# Device Information
+
+:::: {.blackbox data-latex=""}
+
+\begin{itemize}
+
+\item Four devices were deployed.
+
+\item Two were kept in Manchester for the whole study. 
+
+\item One device was in Manchester -> London -> Manchester.
+
+\item One device was in Manchester -> York (roadside side) -> Manchester.
+\end{itemize}
+
+This report aims to show how well the devices have performed through the study and how they were effected by different locations (urban and roadside).
+:::: 
 
 
-```{r echo=FALSE}
+  
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
 
  
 library(DBI)
@@ -62,8 +86,8 @@ lcs <- tbl(con, "lcs_hourly") |>
                measurand == params$pollutant,
                version %in% params$cal_version,
                between(time, params$start, params$end),
-               is.na(flag) | flag != 'Error') %>%
-        rename(lcsmeas = measurement)
+               is.na(flag) | flag != 'Error', is.na(flag) | flag != 'Warning') %>%
+     rename(lcsmeas = measurement)
 
 lcs <- lcs |>
             inner_join(tbl(con, "ref_hourly") %>% select(-version) %>% rename(refmeas = measurement), 
@@ -74,156 +98,230 @@ lcs <- lcs |>
 
 ```
 
-```{r echo=FALSE}
+
+
+```{r function_plot, echo=FALSE, message=FALSE, warning=FALSE}
 
 units <- tbl(con, "measurand") |> filter(measurand == params$pollutant) |> select("units") |> collect()
 
 #Time series and regression plot
 
-time_reg_f <- function(data1, time, lcsmeas, refmeas, ref_lcs){
-   time_p <-  ggplot(data=data1, mapping = aes(x=time, y=lcsmeas, color=Instrument))+
-                   geom_line(alpha=0.4)  +
-            theme_bw() + scale_x_datetime(date_break="1 year", date_labels="%Y")  +
-         theme(legend.position = "bottom", legend.direction= "vertical", legend.title.align=0.5) + guides(color=guide_legend(ncol=2))  +
-  xlab("Time") + ylab(paste("[LCS] /", units)) + labs(title="Time-series") 
-   
-   model <- lm(lcsmeas ~ refmeas, data = data1)
-       eq <- sprintf("y = %.2fx %s %.1f", coef(model)[2], ifelse(sign(coef(model)[1]) == 1, "+", ""), coef(model)[1])
-       r2 <- signif(summary(model)$r.squared, digits = 3)
-       rmse <- data1 |> summarize(rmse1 = sqrt(mean({{ref_lcs}}**2, na.rm=T)))
-       rmse <- collect(rmse)
-       
-       r2 <- sprintf("R2 = %.2f", r2)
-               rmse <- sprintf("RMSE = %.2f", rmse)
-               stats_lab <- paste(eq, "\n", r2, "\n", rmse)
-       #stats_lab <- sprintf("%s, %s, %s", eq, r2, rmse)
-       
-  reg_p <- ggplot(data=data1, mapping = aes(x=refmeas, y=lcsmeas, color = Instrument)) + geom_point(alpha = 0.4, size =0.1)  +  geom_smooth(method=lm, se=FALSE) + 
-    annotate(geom="text", , x = 0.7*(max(data1$refmeas)), y = min(data1$lcsmeas), vjust = 0, label=stats_lab, size =3.3, color="gray29")  + theme_bw()  + 
-   xlab(paste("[Reference] /", units)) + ylab(paste("[LCS] /", units)) + labs(title="Regression") +
-        theme(legend.position = "bottom", legend.direction= "vertical", legend.title.align=0.5) + guides(color=guide_legend(ncol=2)) 
+time_reg_f <- function(data1, time, lcsmeas, refmeas, ref_lcs, deploy) {
+    
+    if(nrow(deploy)==1){
+        alpha_size <- 0.8
         
-       time_reg_p <- ggarrange(time_p, reg_p, common.legend = TRUE, legend = "bottom")
-        return(time_reg_p)
+    }else{
+        alpha_size <- 0.3
+    }
+    
+    time_p <-  ggplot(data = data1,
+                      mapping = aes(x = time, y = lcsmeas, color = Instrument)) +
+        geom_line(alpha = alpha_size)  +
+        theme_bw() + scale_x_datetime(date_break = "1 year", date_labels =
+                                          "%Y")  +
+        theme(
+            legend.position = "bottom",
+            legend.direction = "vertical",
+            legend.title.align = 0.5
+        ) + guides(color = guide_legend(ncol = 2))  +
+        xlab("Time") + ylab(paste("[LCS] /", units)) + labs(title = "Time-series")
+    
+    model <- lm(lcsmeas ~ refmeas, data = data1)
+    eq <- sprintf("y = %.2fx %s %.1f",
+                  coef(model)[2],
+                  ifelse(sign(coef(model)[1]) == 1, "+", ""),
+                  coef(model)[1])
+    r2 <- signif(summary(model)$r.squared, digits = 3)
+    rmse <- data1 |> summarize(rmse1 = sqrt(mean({{ref_lcs}} ** 2, na.rm =
+                                                     T)))
+    rmse <- collect(rmse)
+    
+    r2 <- sprintf("R2 = %.2f", r2)
+    rmse <- sprintf("RMSE = %.2f", rmse)
+    stats_lab <- paste(eq, "\n", r2, "\n", rmse)
+    #stats_lab <- sprintf("%s, %s, %s", eq, r2, rmse)
+    
+    reg_p <- ggplot(data = data1,
+                    mapping = aes(x = refmeas, y = lcsmeas, color = Instrument)) + geom_point(alpha = alpha_size, size =
+                                                                                                  0.1)  +  geom_smooth(method = lm, se = FALSE) +
+        annotate(
+            geom = "text",
+            ,
+            x = 0.7 *(max(data1$refmeas)),
+            y = min(data1$lcsmeas),
+            vjust = 0,
+            label = stats_lab,
+            size = 3.3,
+            color = "gray29"
+        )  + theme_bw()  +
+        xlab(paste("[Reference] /", units)) + ylab(paste("[LCS] /", units)) + labs(title =
+                                                                                       "Regression") +
+        theme(
+            legend.position = "bottom",
+            legend.direction = "vertical",
+            legend.title.align = 0.5
+        ) + guides(color = guide_legend(ncol = 2))
+    
+    time_reg_p <- ggarrange(time_p,
+                            reg_p,
+                            common.legend = TRUE,
+                            legend = "bottom")
+    return(time_reg_p)
 }
 
 
-# Time series function
-time_series_f <- function(data1, time, lcsmeas){
-time_p <-  ggplot(data=data1, mapping = aes(x=time, y=lcsmeas, color=Instrument))+
-                   geom_line(alpha=0.4)  +
-            theme_bw() + scale_x_datetime(date_break="1 year", date_labels="%Y")  +
-         theme(legend.position = "bottom", legend.direction= "vertical") +
-  xlab("Time") + ylab(paste("[LCS] /", units)) + labs(title="Time-series")
-return(time_p)
-}
 
-# Regression plot function
-regression_f <- function(data1, lcsmeas, refmeas, ref_lcs){
-
-       model <- lm(lcsmeas ~ refmeas, data = data1)
-       eq <- sprintf("y = %.2fx %s %.1f", coef(model)[2], ifelse(sign(coef(model)[1]) == 1, "+", ""), coef(model)[1])
-       r2 <- signif(summary(model)$r.squared, digits = 3)
-       rmse <- data1 |> summarize(rmse1 = sqrt(mean({{ref_lcs}}**2, na.rm=T)))
-       rmse <- collect(rmse)
-       
-       r2 <- sprintf("R2 = %.2f", r2)
-               rmse <- sprintf("RMSE = %.2f", rmse)
-               stats_lab <- paste(eq, "\n", r2, "\n", rmse)
-       #stats_lab <- sprintf("%s, %s, %s", eq, r2, rmse)
-       
-  regress_p <- ggplot(data=data1, mapping = aes(x=refmeas, y=lcsmeas, color = Instrument)) + geom_point(alpha = 0.4, size =0.1)  +  geom_smooth(method=lm, se=FALSE) + 
-    annotate(geom="text", , x = 0.75*(max(data1$refmeas)), y = min(data1$lcsmeas), vjust = 0, label=stats_lab, size =3.3, color="gray29")  + theme_bw()  + 
-   xlab(paste("[Reference] /", units)) + ylab(paste("[LCS] /", units)) + labs(title="Regression") +
-        theme(legend.position = "bottom", legend.direction= "vertical") 
-  return(regress_p)
-}
 
 
 # Drift plots function
-drift <- function(stats, refmeas,lcsmeas){
+drift <- function(stats, refmeas, lcsmeas) {
+    bias <- function(refmeas, lcsmeas) {
+        abs(mean(lcsmeas, na.rm = T) - mean(refmeas, na.rm = T))
+    }
+    crmse <- function(refmeas, lcsmeas) {
+        pred_bar <- mean(lcsmeas, na.rm = T)
+        ref_bar <- mean(refmeas, na.rm = T)
+        sqrt(mean((
+            lcsmeas - refmeas - pred_bar + ref_bar
+        ) ** 2, na.rm = T))
+    }
+    rmse <- function(refmeas, lcsmeas) {
+        sqrt(mean((refmeas - lcsmeas) ** 2, na.rm = T))
+    }
     
-bias <- function(refmeas, lcsmeas) {
-    abs(mean(lcsmeas, na.rm=T) - mean(refmeas, na.rm=T))
-}
-crmse <- function(refmeas, lcsmeas) {
-    pred_bar <- mean(lcsmeas, na.rm=T)
-    ref_bar <- mean(refmeas, na.rm=T)
-    sqrt(mean((lcsmeas - refmeas - pred_bar + ref_bar)**2, na.rm=T))
-}
-rmse <- function(refmeas, lcsmeas) {
-    sqrt(mean((refmeas - lcsmeas)**2, na.rm=T))
-}
-
-stats$bias <- rollapply(as.matrix(stats[ c('refmeas', 'lcsmeas')]), 
-                      width=24*40,
-                      FUN=function(x) bias(x[, 1], x[, 2]),
-                      by.column=FALSE, 
-                      fill=NA,
-                      align="center",
-                      by=24) 
-stats$crmse <- rollapply(as.matrix(stats[ c('refmeas', 'lcsmeas')]),
-                       width=24*40,
-                       FUN=function(x) crmse(x[, 1], x[, 2]),
-                       by.column=FALSE,
-                       fill=NA,
-                       align="center",
-                       by=24)
-stats$rmse <- rollapply(as.matrix(stats[ c('refmeas', 'lcsmeas')]),
-                     width=24*40,
-                     FUN=function(x) rmse(x[, 1], x[, 2]),
-                     by.column=FALSE,
-                     fill=NA,
-                     align="center",
-                     by=24)  
-
-stats <- stats |> select(time, bias, crmse, rmse) |> pivot_longer(c(bias, crmse, rmse)) |> filter(!is.na(value)) |> rename(Measurement = name)
-ggplot2::ggplot(data = stats, aes(x=time, y=value, color=Measurement, fill=Measurement)) + geom_line()  +
-             ggplot2::theme_bw() + scale_x_datetime(date_break="1 year", date_labels="%Y") + 
-  xlab("Time") + ylab("Measurements") + labs(title="Drift") +
-        theme(legend.position = "bottom", legend.direction= "vertical")   #+ facet_wrap(~instrument)
+    stats$bias <- rollapply(
+        as.matrix(stats[c('refmeas', 'lcsmeas')]),
+        width = 24 * 40,
+        FUN = function(x)
+            bias(x[, 1], x[, 2]),
+        by.column = FALSE,
+        fill = NA,
+        align = "center",
+        by = 24
+    )
+    stats$crmse <- rollapply(
+        as.matrix(stats[c('refmeas', 'lcsmeas')]),
+        width = 24 * 40,
+        FUN = function(x)
+            crmse(x[, 1], x[, 2]),
+        by.column = FALSE,
+        fill = NA,
+        align = "center",
+        by = 24
+    )
+    stats$rmse <- rollapply(
+        as.matrix(stats[c('refmeas', 'lcsmeas')]),
+        width = 24 * 40,
+        FUN = function(x)
+            rmse(x[, 1], x[, 2]),
+        by.column = FALSE,
+        fill = NA,
+        align = "center",
+        by = 24
+    )
+    
+    stats <- stats |> select(time, bias, crmse, rmse) |> pivot_longer(c(bias, crmse, rmse)) |> filter(!is.na(value)) |> rename(Measurement = name)
+    ggplot2::ggplot(data = stats,
+                    aes(
+                        x = time,
+                        y = value,
+                        color = Measurement,
+                        fill = Measurement
+                    )) + geom_line()  +
+        ggplot2::theme_bw() + scale_x_datetime(date_break = "1 year", date_labels =
+                                                   "%Y") +
+        xlab("Time") + ylab("Measurements") + labs(title = "Drift") +
+        theme(legend.position = "bottom", legend.direction = "vertical")   #+ facet_wrap(~instrument)
 }
 
 ## Ultimate plot function
-plot_f <- function(data, time, lcsmeas, refmeas, ref_lcs){
-    time_reg_p <- time_reg_f(data, time, lcsmeas, refmeas, ref_lcs)
+plot_f <- function(data, time, lcsmeas, refmeas, ref_lcs, deploy) {
+    time_reg_p <- time_reg_f(data, time, lcsmeas, refmeas, ref_lcs, deploy)
     drift_p <- drift(data, refmeas, lcsmeas)
     
-p <- plot_grid(time_reg_p, drift_p,  ncol=2, rel_widths = c(2, 1))
-return(p)
+    p <- plot_grid(time_reg_p,
+                   drift_p,
+                   ncol = 2,
+                   rel_widths = c(2, 1))
+    return(p)
 }
 
 ```
 
-# Urban
-
-Instruments AQM:388, 389, 390 deployed in urban area. 388 and 390 were kept in Manchester for the whole study. 389 were in Manchester then moved to London then back to Manchester.
+# Urban Background
 
 ## Manchester
 
-```{r echo=FALSE}
-manch_lcs <- lcs |> filter(location=="Manchester") |> rename(Instrument = instrument) |> collect()
+```{r manchester, echo=FALSE,message=FALSE, warning=FALSE}
+manch_lcs <- lcs |> filter(location == "Manchester") |> rename(Instrument = instrument) |> collect()
+deploy <- tbl(con, "deployment") |> filter(location == "Manchester", instrument %in% params$device) |> collect()
 
-plot_f(manch_lcs, time, lcsmeas, refmeas, ref_lcs)
+plot_f(manch_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
+
 ```
 
+<!-- \caption{Manchester Plots} -->
+\footnotetext{Manchester Plots}
+\newpage
+
+\footnotetext{London Plots}
 ## London
 
-```{r echo=FALSE}
+```{r london, echo=FALSE,message=FALSE, warning=FALSE}
 london_lcs <- lcs |> filter(location=="London") |> rename(Instrument = instrument) |> collect()
+deploy <- tbl(con, "deployment") |> filter(location == "London", instrument %in% params$device) |> collect()
 
-plot_f(london_lcs, time, lcsmeas, refmeas, ref_lcs)
+plot_f(london_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
 ```
+<!-- \caption{London Plots} -->
+
+:::: {.middlebox data-latex=""}
+\title{Interpreting Data}
+
+\begin{itemize}
+
+\item RMSE - closer the value is to 0, means that the reference values closely match the tested sensors values'
+
+\item R-squared (r2) - a value closer to 1 indicates the regression predictions fit more accurately 
+
+\item Drift
+
+\end{itemize}
+
+:::: 
+
+\newpage
+\footnotetext{York Plots}
 
 # Roadside (York Fishergate)
 
 Instrument AQM391 deployed on York roadside.
 
-```{r echo=FALSE}
+```{r york, echo=FALSE, message=FALSE, warning=FALSE}
 york_lcs <- lcs |> filter(location=="York") |> rename(Instrument = instrument) |> collect()
+deploy <- tbl(con, "deployment") |> filter(location == "York", instrument %in% params$device) |> collect()
 
-plot_f(york_lcs, time, lcsmeas, refmeas, ref_lcs)
+plot_f(york_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
 ```
+
+:::: {.bottombox data-latex=""}
+
+\begin{itemize}
+
+\item Four devices were deployed.
+
+\item Two were kept in Manchester for the whole study. 
+
+\item One device was in Manchester -> London -> Manchester.
+
+\item One device was in Manchester -> York (roadside side) -> Manchester.
+\end{itemize}
+
+This report aims to show how well the devices have performed through the study and how they were effected by different locations (urban and roadside).
+:::: 
+
+
 
 
 

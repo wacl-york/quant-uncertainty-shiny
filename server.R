@@ -598,16 +598,16 @@ server <- function(session, input, output) {
        }
    )  
    
-   output$AQM388 <- downloadHandler(
-       filename = function(){"AQM388.pdf"},
-       
-       content = function(file) {
-            out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document",
-                                     params = list(device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "NO2", cal_version = "cal1")) #, output_file=file)
-            file.rename(out, file)
-       }
-          
-   )
+   # output$AQM388 <- downloadHandler(
+   #     filename = function(){"AQM388.pdf"},
+   #     
+   #     content = function(file) {
+   #          out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document",
+   #                                   params = list(device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "NO2", cal_version = "cal1")) #, output_file=file)
+   #          file.rename(out, file)
+   #     }
+   #        
+   # )
 
    output$AQMeshNO2 <- downloadHandler(
        filename = function(){"AQMeshNO2.pdf"},
