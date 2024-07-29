@@ -58,7 +58,9 @@ ui <- dashboardPage(
                         border: 1px solid #dddddd;
                         text-align: left;
                         padding: 8px;
+                        color:#003366;
                         }
+                        
 
                      }
                      
@@ -78,68 +80,163 @@ ui <- dashboardPage(
                         </tr>
                         <tr class = 'evenrow'>
                         <th>Device Make</th>
-                        <th>Est. Cost (GBP)</th>
+                        
                         <th>Meas.</th>
-                        <th>R2</th>
+                        
                         <th>Summary Report </th>
                         </tr>
                         
                         <tr class = 'oddrow'>
-                        <td rowspan='3' ><a href='https://www.aeroqual.com/products/aqm-stations'>AQM388</a></td>
-                        <td rowspan='3'>Cost</td>
+                        <td rowspan='3' ><a href='https://www.aeroqual.com/products/aqm-stations'>AQMesh</a></td>
+                       
                         <td>NO2</td>
-                        <td>R2</td><td>")),
+                        <td>")),
                     
-                    downloadButton("AQMeshNO2", "Generate NO2 report"),
+                    downloadLink("AQMeshNO2", "AQMesh NO2 Report"),
                     
                     HTML(paste0("
                          </td>
                         </tr>
                         <tr class = 'oddrow'>
                         <td>O3</td>
-                        <td>R2</td>
+                        
                         <td>")),
                         
-                        downloadButton("AQMeshO3", "Generate O3 report"),
+                        downloadLink("AQMeshO3", "AQMesh O3 Report"),
                         
                         HTML(paste0(
                          "</td>
                         </tr>
                         <tr class = 'oddrow'>
                         <td>PM2.5</td>
-                        <td>R2</td>
+                        
                         <td> ")),
                     
-                    downloadButton("AQMeshPM2.5", "Generate PM2.5 report"),
+                    downloadLink("AQMeshPM2.5", "AQMesh PM2.5 Report"),
                     
                     HTML(paste0(
                         "</td>
                         </tr>
                         
                         <tr class = 'evenrow'>
-                        <td rowspan='3'><a href='https://www.aeroqual.com/products/aqm-stations'>AQM389</a></td>
-                        <td rowspan='3'>Cost</td>
+                        <td rowspan='3'><a href='https://www.aeroqual.com/products/aqy-r-series/aqy-r-air-quality-network-monitor'>Aeroqual</a></td>
+                        
                         <td>NO2</td>
-                        <td>R2</td>
-                        <td> </td>
+                       
+                        <td>")),
+                    
+                    downloadLink("AeroqualNO2", "Aeroqual NO2 Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
                         </tr>
                         <tr class = 'evenrow'>
                         <td>O3</td>
-                        <td>R2</td>
-                        <td> report</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("AeroqualO3", "Aeroqual O3 Report"),
+                    
+                    HTML(paste0("
+                        </td>
                         </tr>
                         <tr class = 'evenrow'>
                         <td>PM2.5</td>
-                        <td>R2</td>
-                        <td> report</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("AeroqualPM2.5", "Aeroqual PM2.5 Report"),
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='3'><a href='https://www.arivalves.com/arisense'>Arisense</a></td>
+                       
+                        <td>NO2</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("ArisenseNO2", "Arisense NO2 Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>O3</td>
+                       
+                        <td> ")),
+                    
+                    downloadLink("ArisenseO3", "Arisense O3 Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("ArisensePM2.5", "Arisense PM2.5 Report"),
+                        
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        
+                         <tr class = 'evenrow'>
+                        <td ><a href='https://www2.purpleair.com/'>Purple Air</a></td>
+                        
+                        <td>PM2.5</td>
+                        
+                        <td>")),
+                    
+                    downloadLink("PurpleAir", "Purple Air Report"),
+                        
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='3'><a href='https://www.earthsense.co.uk/zephyr'>Zephr</a></td>
+                        
+                        <td>NO2</td>
+                        
+                        <td>")),
+                    
+                    downloadLink("ZephrNO2", "Zephr NO2 Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>O3</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("ZephrO3", "Zephr O3 Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("ZephrPM2.5", "Zephr PM2.5 Report"),
+                    HTML(paste0("
+                        
+                        </td>
                         </tr>
                         </table>"   
                         )
                         )
                         
-                        
-                   
-                    
                     ),
             tabItem(tabName="input",
                     h2("Compare your own sampled data"),

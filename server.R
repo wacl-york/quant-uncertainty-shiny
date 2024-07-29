@@ -580,14 +580,6 @@ server <- function(session, input, output) {
                     choices = MEASURANDS)
     })
     
-   # output$report <- downloadHandler(
-   #     filename = function(){
-   #         paste(tools::file_path_sans_ext(input$add_data), "report",  input$measurand2, ".csv", sep = " ")
-   #     },
-   #     content = function(filed) {
-   #         write.csv(data(), filed)
-   #     }
-   # )
  
    output$report <- downloadHandler(
        filename = function(){
@@ -598,22 +590,14 @@ server <- function(session, input, output) {
        }
    )  
    
-   # output$AQM388 <- downloadHandler(
-   #     filename = function(){"AQM388.pdf"},
-   #     
-   #     content = function(file) {
-   #          out <- rmarkdown::render("AQM388.Rmd", output_format = "pdf_document",
-   #                                   params = list(device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "NO2", cal_version = "cal1")) #, output_file=file)
-   #          file.rename(out, file)
-   #     }
-   #        
-   # )
+   
+   # Reports
 
    output$AQMeshNO2 <- downloadHandler(
        filename = function(){"AQMeshNO2.pdf"},
        content = function(file) {
-           out <- rmarkdown::render("AQMesh.Rmd", output_format = "pdf_document",
-                                    params = list(device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "NO2", cal_version = c("cal1", "cal2"))) #, output_file=file)
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="AQMesh", device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "NO2",sensor="1", cal_version = c("cal1", "cal2"))) 
            file.rename(out, file)
        }
    )
@@ -621,12 +605,110 @@ server <- function(session, input, output) {
    output$AQMeshO3 <- downloadHandler(
        filename = function(){"AQMeshO3.pdf"},
        content = function(file) {
-           out <- rmarkdown::render("AQMesh.Rmd", output_format = "pdf_document",
-                                    params = list(device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "O3", cal_version = c("cal1", "cal2"))) #, output_file=file)
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="AQMesh", device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "O3", sensor="1", cal_version = c("cal1", "cal2"))) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$AQMeshPM2.5 <- downloadHandler(
+       filename = function(){"AQMeshPM2.5.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="AQMesh", device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "PM2.5", sensor="1", cal_version = "cal1")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$AeroqualNO2 <- downloadHandler(
+       filename = function(){"AeroqualNO2.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Aeroqual", device = c("AQY872", "AQY873", "AQY874", "AQY875"), pollutant = "NO2", sensor=c("1", "2"),cal_version = c("cal1", "cal2"))) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$AeroqualO3 <- downloadHandler(
+       filename = function(){"AeroqualO3.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Aeroqual", device = c("AQY872", "AQY873", "AQY874", "AQY875"), pollutant = "O3", sensor=c("1","2"), cal_version = c("cal1", "cal2"))) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$AeroqualPM2.5 <- downloadHandler(
+       filename = function(){"AeroqualPM2.5.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Aeroqual", device = c("AQY872", "AQY873", "AQY874", "AQY875"), pollutant = "PM2.5", sensor=c("1", "2"), cal_version = c("cal1", "cal2"))) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$ArisenseNO2 <- downloadHandler(
+       filename = function(){"ArisenseNO2.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Arisense", device = c("Ari063", "Ari078", "Ari086", "Ari093"), pollutant = "NO2", sensor="1", cal_version = c("cal1", "cal2"))) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$ArisenseO3 <- downloadHandler(
+       filename = function(){"ArisenseO3.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Arisense", device = c("Ari063", "Ari078", "Ari086", "Ari093"), pollutant = "O3", sensor="1", cal_version = c("cal1", "cal2"))) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$ArisensePM2.5 <- downloadHandler(
+       filename = function(){"ArisensePM2.5.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Arisense", device = c("Ari063", "Ari078", "Ari086", "Ari093"), pollutant = "PM2.5", sensor="1", cal_version = c("cal1", "cal2"))) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$ZephrNO2 <- downloadHandler(
+       filename = function(){"ZephrNO2.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Zephr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "NO2", sensor=c("1", "2"), cal_version = "out-of-box")) 
            file.rename(out, file)
        }
    )
 
+   output$ZephrO3 <- downloadHandler(
+       filename = function(){"ZephrO3.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Zephr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "O3", sensor=c("1", "2"), cal_version = "out-of-box")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$ZephrPM2.5 <- downloadHandler(
+       filename = function(){"ZephrPM2.5.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Zephr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "PM2.5", sensor=c("1", "2"), cal_version = "out-of-box")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$PurpleAir <- downloadHandler(
+       filename = function(){"PurpleAirPM2.5.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="PurpleAir", device = c("PA2", "PA3", "PA4", "PA5", "PA6", "PA7", "PA8", "PA9", "PA10"), pollutant = "PM2.5", sensor="1", cal_version = "indoor")) 
+           file.rename(out, file)
+       }
+   )
    #############################
          
     observeEvent(input$add_comparison, {
