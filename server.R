@@ -704,7 +704,7 @@ server <- function(session, input, output) {
    output$PurpleAir <- downloadHandler(
        filename = function(){"PurpleAirPM2.5.pdf"},
        content = function(file) {
-           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+           out <- rmarkdown::render("purple_air_report.Rmd", output_format = "pdf_document",
                                     params = list(company="PurpleAir", device = c("PA2", "PA3", "PA4", "PA5", "PA6", "PA7", "PA8", "PA9", "PA10"), pollutant = "PM2.5", sensor="1", cal_version = "indoor")) 
            file.rename(out, file)
        }

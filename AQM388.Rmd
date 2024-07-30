@@ -73,6 +73,28 @@ lcs <- lcs |>
     mutate(ref_lcs = refmeas - lcsmeas)
 
 ```
+
+```{r calibration, echo=FALSE, message=FALSE, warning=FALSE}
+
+cal <- tbl(con, "sensorcalibration") |> collect()
+
+calno <- length(params$cal_version)
+
+if (calno==1) {
+   cal1 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version, instrument %in% params$device) |> summarize(dateapplied)  |> filter(row_number()==1) 
+    
+} else {
+     cal1 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version[1], instrument %in% params$device)  |> summarize(dateapplied)  |> filter(row_number()==1) 
+    
+     cal2 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version[2], instrument %in% params$device) |> summarize(dateapplied)  |> filter(row_number()==1) 
+     cal1 <- format(cal1$dateapplied, format="%d/%m/%y")
+cal2 <- format(cal2$dateapplied, format="%d/%m/%y")
+
+     print(cal1)
+     print(cal2)
+    }
+```
+
 ## rmse
 
 ```{r echo=FALSE}

@@ -17,41 +17,9 @@ params:
     end: "2022-10-31"
 ---    
 
-
 ```{r logos, echo=FALSE, message=FALSE, warning=FALSE}
-
  knitr::include_graphics("www/wacl.png")
 ```
-
-
-\newpage
-
-\fancyhead{}
-\renewcommand{\headrulewidth}{1pt} 
-\fancyhead[R]{\textbf{`r params$company` `r params$pollutant`} \slshape\leftmark}  
-
-\pagestyle{fancy}
-
-# Device Information
-
-:::: {.blackbox data-latex=""}
-
-Four devices were deployed:
-
-\begin{itemize}
-
-\item Two were kept in Manchester for the whole study. 
-
-\item One device was in Manchester -> London -> Manchester.
-
-\item One device was in Manchester -> York (roadside side) -> Manchester.
-\end{itemize}
-
-This report aims to show how well the devices have performed throughout the study and how they were effected by different locations (urban background and roadside).
-:::: 
-
-
-  
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
 
  
@@ -114,8 +82,77 @@ lcs <- lcs |>
 
 ```
 
+```{r calibration, echo=FALSE, message=FALSE, warning=FALSE}
 
+cal <- tbl(con, "sensorcalibration") |> collect()
 
+calno <- length(params$cal_version)
+
+if (calno==1) {
+    if (params$cal_version=="out-of-box"){
+        cal1 <- "no calibration was performed (out-of-box)"
+        cal2 <- "no second calibration performed (out-of-box)"
+        
+        
+    }
+    else{
+     cal1 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version, instrument %in% params$device) |> summarize(dateapplied)  |> filter(row_number()==1) 
+   cal1 <- format(cal1$dateapplied, format="%d/%m/%y")  
+    cal2 <- "no second calibration"
+    }
+   
+    
+} else {
+     cal1 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version[1], instrument %in% params$device) |> summarize(dateapplied)  |> filter(row_number()==1) 
+      cal1 <- format(cal1$dateapplied, format="%d/%m/%y")
+     
+     cal2 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version[2], instrument %in% params$device) |> summarize(dateapplied)  |> filter(row_number()==1) 
+     cal2 <- format(cal2$dateapplied, format="%d/%m/%y")
+    }
+```
+
+\newpage
+
+\fancyhead{}
+\renewcommand{\headrulewidth}{1pt} 
+\fancyhead[R]{\textbf{`r params$company` `r params$pollutant`} \slshape\leftmark}  
+
+\pagestyle{fancy}
+
+# Device Information
+
+:::: {.blackbox data-latex=""}
+
+Four devices were deployed:
+
+\begin{itemize}
+
+\item Two were kept in Manchester for the whole study. 
+
+\item One device was in Manchester -> London -> Manchester.
+
+\item One device was in Manchester -> York (roadside side) -> Manchester.
+\end{itemize}
+
+This report aims to show how well the devices have performed throughout the study and how they were effected by different locations (urban background and roadside).
+:::: 
+
+:::: {.bluebox data-latex=""}
+
+The calibration(s) performed by the manufacturers were completed on:
+
+\begin{itemize}
+
+\item  `r cal1 `
+
+\item `r cal2`
+
+\end{itemize}
+
+:::: 
+  
+
+\newpage
 ```{r function_plot, echo=FALSE, message=FALSE, warning=FALSE}
 
 units <- tbl(con, "measurand") |> filter(measurand == params$pollutant) |> select("units") |> collect()
