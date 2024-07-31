@@ -591,7 +591,7 @@ server <- function(session, input, output) {
    )  
    
    
-   # Reports
+   # Reports Sensors
 
    output$AQMeshNO2 <- downloadHandler(
        filename = function(){"AQMeshNO2.pdf"},
@@ -669,7 +669,7 @@ server <- function(session, input, output) {
        filename = function(){"ArisensePM2.5.pdf"},
        content = function(file) {
            out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
-                                    params = list(company="Arisense", device = c("Ari063", "Ari078", "Ari086", "Ari093"), pollutant = "PM2.5", sensor="1", cal_version = c("cal1", "cal2"))) 
+                                    params = list(company="Arisense", device = c("Ari063", "Ari078", "Ari086", "Ari093"), pollutant = "PM2.5", sensor="1", cal_version = "cal1")) 
            file.rename(out, file)
        }
    )
@@ -709,6 +709,95 @@ server <- function(session, input, output) {
            file.rename(out, file)
        }
    )
+   
+   # Cross Company Reports
+   ##PM2.5
+   
+   output$PM_London <- downloadHandler(
+       filename = function(){"PM_London_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("PM_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="London", device = c("AQM389", "AQY874", "Ari086", "Zep311", "PA2", "PA5", "PA9"), pollutant = "PM2.5")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_Manch <- downloadHandler(
+       filename = function(){"PM_Manchester_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("PM_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="Manchester", device = c("AQM388", "AQM389", "AQM390", "AQM391", "AQY872", "AQY873","AQY874", "AQY875","Ari063","Ari078","Ari086", "Ari093","Zep188", "Zep309", "Zep311", "Zep344", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7","PA8", "PA9", "PA10"), pollutant = "PM2.5")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_York <- downloadHandler(
+       filename = function(){"PM_York_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("PM_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="York", device = c("AQM391", "AQY875", "Ari093", "Zep309", "PA7","PA8", "PA10"), pollutant = "PM2.5")) 
+           file.rename(out, file)
+       }
+   )
+   
+   ##NO2
+   
+   output$NO2_London <- downloadHandler(
+       filename = function(){"NO2_London_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("NO2_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="London", device = c("AQM389", "AQY874", "Ari086", "Zep311", "PA2", "PA5", "PA9"), pollutant = "NO2")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_Manch <- downloadHandler(
+       filename = function(){"NO2_Manchester_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("NO2_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="Manchester", device = c("AQM388", "AQM389", "AQM390", "AQM391", "AQY872", "AQY873","AQY874", "AQY875","Ari063","Ari078","Ari086", "Ari093","Zep188", "Zep309", "Zep311", "Zep344", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7","PA8", "PA9", "PA10"), pollutant = "NO2")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_York <- downloadHandler(
+       filename = function(){"NO2_York_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("NO2_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="York", device = c("AQM391", "AQY875", "Ari093", "Zep309", "PA7","PA8", "PA10"), pollutant = "NO2")) 
+           file.rename(out, file)
+       }
+   )
+   
+   ##O3
+   
+   output$O3_London <- downloadHandler(
+       filename = function(){"O3_London_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("O3_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="London", device = c("AQM389", "AQY874", "Ari086", "Zep311", "PA2", "PA5", "PA9"), pollutant = "O3")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_Manch <- downloadHandler(
+       filename = function(){"O3_Manchester_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("O3_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="Manchester", device = c("AQM388", "AQM389", "AQM390", "AQM391", "AQY872", "AQY873","AQY874", "AQY875","Ari063","Ari078","Ari086", "Ari093","Zep188", "Zep309", "Zep311", "Zep344", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7","PA8", "PA9", "PA10"), pollutant = "O3")) 
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_York <- downloadHandler(
+       filename = function(){"O3_York_Report.pdf"},
+       content = function(file) {
+           out <- rmarkdown::render("O3_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="York", device = c("AQM391", "AQY875", "Ari093", "Zep309", "PA7","PA8", "PA10"), pollutant = "O3")) 
+           file.rename(out, file)
+       }
+   )
+   
    #############################
          
     observeEvent(input$add_comparison, {

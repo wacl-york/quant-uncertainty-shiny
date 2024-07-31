@@ -1,0 +1,365 @@
+
+---
+title: " Nitrogen Dioxide (`r params$pollutant`) in `r params$location`" 
+toc: true
+theme: united
+output: 
+  pdf_document:
+    includes:
+      in_header: "preamble.tex"
+params:
+    location: ""
+    device: !r c("", "", "", "", "", "", "")
+    pollutant: ""
+    start: "2019-12-10"
+    end: "2022-10-31"
+--- 
+
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+
+ 
+library(DBI)
+library(knitr)
+library(kableExtra)
+library(RPostgres)
+library(shiny)
+library(shinyjs)
+library(tidyverse)
+library(lubridate)
+library(jsonlite)
+library(quantr)
+library(readxl)
+library(tidyverse)
+library(writexl)
+library(httr)
+library(zoo)
+library(cowplot)
+library(ggpubr)
+library(patchwork)
+library(dplyr)
+
+
+options(dplyr.summarise.inform=FALSE)
+# Somewhat hacky way to tell if running hosted, but still the recommended method
+# https://stackoverflow.com/questions/31423144/how-to-know-if-the-app-is-running-at-local-or-on-server-r-shiny
+is_local <- Sys.getenv('SHINY_PORT') == ""
+
+if (is_local) {
+    creds_fn <- 'creds.json'
+} else {
+    creds_fn <- "/mnt/shiny/quant_us/creds.json"
+}
+
+CREDS <- fromJSON(creds_fn)
+
+con <- dbConnect(Postgres(),
+                     dbname=CREDS$db,
+                     host=CREDS$host,
+                     port=CREDS$port,
+                     user=CREDS$username,
+                     password=CREDS$password)
+
+ 
+lcs <- tbl(con, "lcs_hourly") |>
+        filter(instrument %in% params$device,
+               measurand == params$pollutant,
+               location == params$location,
+               between(time, params$start, params$end),
+               is.na(flag) | flag != 'Error', is.na(flag) | flag != 'Warning') %>%
+     rename(lcsmeas = measurement)
+
+lcs <- lcs |>
+            inner_join(tbl(con, "ref_hourly") %>% select(-version) %>% rename(refmeas = measurement), 
+                       by=c("location", "time", "measurand")) 
+
+lcs <- lcs |> mutate(ref_lcs = refmeas - lcsmeas)
+
+```
+
+```{r logos, echo=FALSE, message=FALSE, warning=FALSE}
+ knitr::include_graphics("www/wacl.png")
+```
+
+\newpage
+
+\fancyhead{}
+\renewcommand{\headrulewidth}{1pt} 
+\fancyhead[R]{\textbf{ Particulate Matter (PM2.5) in `r params$location`} \slshape\leftmark}  
+
+\pagestyle{fancy}
+
+## Devices
+
+:::: {.blackbox data-latex=""}
+
+Five types of devices measured `r params$pollutant` in `r params$location`:
+
+\begin{itemize}
+
+\item AQMesh - AQM389
+
+\item Aeroqual - AQY874
+
+\item AriSense - Ari086
+
+\item Purple Air -  PA2, PA5, PA9
+
+\item Zephr -  Zep311
+
+\end{itemize}
+
+This report aims to show how well the devices have performed throughout the study measuring `r params$pollutant` in `r params$location`.
+
+:::: 
+
+## Interpreting the Data
+
+:::: {.middlebox data-latex=""}
+\title{Interpreting the data}
+
+\begin{itemize}
+
+\item Time-series - the darker red colour shows the overlap betweeen the lcs measurements and the reference measurements taken.
+
+\item RMSE - the closer the value is to 0, means that the reference values closely matched the tested sensors values.
+
+\item Bias - the difference between average sensor measurements and the average reference measurements
+
+\item CRMSE - similar to the RMSE but with the bias subtracted. This measures error around an average.
+
+\item R-squared (r2) - a value closer to 1 indicates the regression predictions fit more accurately.
+
+\item Drift - a gradual increase shows a larger effect of RMSE, CRMSE or bias that the device possesses.
+
+\end{itemize}
+
+:::: 
+
+
+```{r function_plot, echo=FALSE, message=FALSE, warning=FALSE}
+
+units <- tbl(con, "measurand") |> filter(measurand == params$pollutant) |> select("units") |> collect()
+
+
+#time-series plot
+
+time_series_f <- function(data1, lcsmeas, refmeas, deploy, title) {
+
+    time_p <-  plot_time_series(
+        data1,
+        lcs_column = "lcsmeas",
+        reference_column = "refmeas",
+        time_column = "time"
+    )  +
+        guides(color = "legend") +
+        theme_bw() + scale_x_datetime(date_break = "1 year", date_labels =
+                                          "%Y")  +
+        # theme(legend.position="none")+
+        theme(text = element_text(size = 25)) +
+        labs(tag = paste(title, " ")) +
+        theme(plot.tag.position = "left",
+              plot.tag = element_text(size = 40)) +
+        theme(
+            legend.background = element_rect(fill = NA),
+            legend.position = "bottom",
+            legend.direction = "vertical",
+            legend.title.align = 0.5
+        ) + guides(color = guide_legend(ncol = 1)) +
+    
+    xlab("Time") + ylab(paste("Concentration /", units)) #+ labs(title = "Time-series")
+    
+    return(time_p)
+}
+
+# regression plot
+
+regress_f <- function(data1, lcsmeas, refmeas, ref_lcs, deploy){
+    if(nrow(deploy)==1){
+        alpha_size <- 0.8
+        
+    }else{
+        alpha_size <- 0.3
+    }
+    
+   model <- lm(lcsmeas ~ refmeas, data = data1)
+    eq <- sprintf("y = %.2fx %s %.1f",
+                  coef(model)[2],
+                  ifelse(sign(coef(model)[1]) == 1, "+", ""),
+                  coef(model)[1])
+    r2 <- signif(summary(model)$r.squared, digits = 3)
+    rmse <- data1 |> summarize(rmse1 = sqrt(mean({{ref_lcs}} ** 2, na.rm =
+                                                     T)))
+    rmse <- collect(rmse)
+    
+    r2 <- sprintf("R2 = %.2f", r2)
+    rmse <- sprintf("RMSE = %.2f", rmse)
+    stats_lab <- paste(eq, "\n", r2, "\n", rmse)
+    
+    
+    reg_p <- ggplot(data = data1,
+                    mapping = aes(x = refmeas, y = lcsmeas, color = Instrument)) + geom_abline(size=1, colour="gray29", alpha=0.9) + geom_point(alpha = alpha_size, size =
+                                                                                                  0.1)  +  geom_smooth(method = lm, se = FALSE) +
+        annotate(
+            geom = "text",
+            
+            x = 0.7 *(max(data1$refmeas)),
+            y = min(data1$lcsmeas),
+            vjust = 0,
+            label = stats_lab,
+            size = 10,
+            color = "black"
+        )  + theme_bw()  +
+        xlab(paste("[Reference] /", units)) + ylab(paste("[LCS] /", units))+ theme(text=element_text(size=25)) + # labs(title =
+                                                                                      # "Regression") + 
+           theme(legend.position="none")# +
+        # theme(
+        #     legend.position = "bottom",
+        #     legend.direction = "vertical",
+        #     legend.title.align = 0.5
+        # ) + guides(color = guide_legend(ncol = 2))
+    
+
+    return(reg_p)  
+}
+
+
+# Drift plots function
+drift <- function(stats, refmeas, lcsmeas) {
+    bias <- function(refmeas, lcsmeas) {
+        abs(mean(lcsmeas, na.rm = T) - mean(refmeas, na.rm = T))
+    }
+    crmse <- function(refmeas, lcsmeas) {
+        pred_bar <- mean(lcsmeas, na.rm = T)
+        ref_bar <- mean(refmeas, na.rm = T)
+        sqrt(mean((
+            lcsmeas - refmeas - pred_bar + ref_bar
+        ) ** 2, na.rm = T))
+    }
+    rmse <- function(refmeas, lcsmeas) {
+        sqrt(mean((refmeas - lcsmeas) ** 2, na.rm = T))
+    }
+    
+    stats$bias <- rollapply(
+        as.matrix(stats[c('refmeas', 'lcsmeas')]),
+        width = 24 * 40,
+        FUN = function(x)
+            bias(x[, 1], x[, 2]),
+        by.column = FALSE,
+        fill = NA,
+        align = "center",
+        by = 24
+    )
+    stats$crmse <- rollapply(
+        as.matrix(stats[c('refmeas', 'lcsmeas')]),
+        width = 24 * 40,
+        FUN = function(x)
+            crmse(x[, 1], x[, 2]),
+        by.column = FALSE,
+        fill = NA,
+        align = "center",
+        by = 24
+    )
+    stats$rmse <- rollapply(
+        as.matrix(stats[c('refmeas', 'lcsmeas')]),
+        width = 24 * 40,
+        FUN = function(x)
+            rmse(x[, 1], x[, 2]),
+        by.column = FALSE,
+        fill = NA,
+        align = "center",
+        by = 24
+    )
+    
+    stats <- stats |> select(time, bias, crmse, rmse) |> pivot_longer(c(bias, crmse, rmse)) |> filter(!is.na(value)) |> rename(Measurement = name)
+    ggplot2::ggplot(data = stats,
+                    aes(
+                        x = time,
+                        y = value,
+                        color = Measurement,
+                        fill = Measurement
+                    )) + geom_line()  +
+        ggplot2::theme_bw() + scale_x_datetime(date_break = "1 year", date_labels =
+                                                   "%Y") +
+        xlab("Time") + ylab("Measurements") + theme(text=element_text(size=25)) + #labs(title = "Drift") +
+        #  theme(legend.position="none")
+        theme(legend.position = "bottom", legend.direction = "vertical")   #+ facet_wrap(~instrument)
+}
+
+## Ultimate plot function
+plot_f <- function(data, time, lcsmeas, refmeas, ref_lcs, deploy, title) {
+    
+    time_p <- time_series_f(data, lcsmeas, refmeas, deploy, title)
+    reg_p <- regress_f(data, lcsmeas, refmeas, ref_lcs, deploy)
+    drift_p <- drift(data, refmeas, lcsmeas)
+    
+    p <- wrap_plots(time_p, reg_p,
+                   drift_p)
+
+       return(p)
+}
+
+```
+
+\newpage
+
+
+
+```{r AQMesh, echo=FALSE,message=FALSE, warning=FALSE}
+
+aqm_name <- "AQMesh"
+aqm_lcs <- lcs |> filter(grepl('AQM', instrument), sensornumber =="1", version == "cal1") |> rename(Instrument = instrument) |> collect() 
+
+deploy <- tbl(con, "deployment") |> filter(grepl('AQM', instrument)) |> collect()
+
+aqm_p <- plot_f(aqm_lcs, time, lcsmeas, refmeas, ref_lcs, deploy, aqm_name)
+
+```
+
+
+```{r AQY, echo=FALSE,message=FALSE, warning=FALSE}
+
+aqy_name <- "Aeroqual"
+
+aqy_lcs <- lcs |> filter(grepl('AQY', instrument), sensornumber %in% c("1", "2"), version %in% c("cal1", "cal2")) |> rename(Instrument = instrument) |> collect() 
+
+deploy <- tbl(con, "deployment") |> filter(grepl('AQY', instrument)) |> collect()
+
+aqy_p <- plot_f(aqy_lcs, time, lcsmeas, refmeas, ref_lcs, deploy, aqy_name)
+
+
+```
+
+
+```{r Ari, echo=FALSE,message=FALSE, warning=FALSE}
+ari_name <- "AriSense"
+
+ari_lcs <- lcs |> filter(grepl('Ari', instrument), sensornumber=="1", version == "cal1") |> rename(Instrument = instrument) |> collect() 
+
+deploy <- tbl(con, "deployment") |> filter(grepl('Ari', instrument)) |> collect()
+
+ari_p <- plot_f(ari_lcs, time, lcsmeas, refmeas, ref_lcs, deploy, ari_name)
+
+```
+
+
+```{r Zep, echo=FALSE,message=FALSE, warning=FALSE}
+zep_name <- "Zephr"
+
+zep_lcs <- lcs |> filter(grepl('Zep', instrument)) |> rename(Instrument = instrument) |> collect() 
+
+deploy <- tbl(con, "deployment") |> filter(grepl('Zep', instrument)) |> collect()
+
+zep_p <- plot_f(zep_lcs, time, lcsmeas, refmeas, ref_lcs, deploy, zep_name)
+
+```
+
+```{r plot, echo=FALSE,message=FALSE, warning=FALSE,  fig.cap= "Quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot of the instruments in London against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error (RMSE), the red line represents the mean bias and the green line shows the centered root mean squared error (CRMSE))." , fig.height = 25, fig.width = 20}
+
+wrap_plots(aqm_p, aqy_p, ari_p, pa_p, zep_p, ncol=1) +
+  plot_annotation(title = "     Time-series                             Regression                             Drift") &
+  theme(plot.title = element_text(hjust = 0.5, size=30)) 
+
+```
+
+

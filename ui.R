@@ -13,7 +13,7 @@ ui <- dashboardPage(
                 menuItem("Evaluation", tabName="evaluation", icon=icon("chart-simple")),
                 menuItem("Devices", tabName="devices", icon=icon("microscope")),
                 menuItem("About", tabName="about", icon=icon("house")),
-                menuItem("Own Data Evaluation", tabName="input", icon=icon("arrow-up-from-bracket") ),
+                # menuItem("Own Data Evaluation", tabName="input", icon=icon("arrow-up-from-bracket") ),
                 menuItem("Device Reports", tabName="report", icon=icon("database")),
                
                 
@@ -58,6 +58,7 @@ ui <- dashboardPage(
                         <li>A scatter plot assessing the linearity of the sensor system, along with the R2 and Root Mean Square Error (RMSE) summary metrics</li>
                         <li>A plot representing the drift of mean bias, RMSE, and Centred Root Mean Square Error (CRMSE)</li>
                         </ul>
+                        <br>
                         <style>
                      .report{
                         table {
@@ -85,9 +86,9 @@ ui <- dashboardPage(
                         
                         </style>
                         
-                        <table class = 'report' style = 'width:90%;' >
+                        <table class = 'report' style = 'width:49%;float:left;' >
                         <tr class = 'oddrow'>
-                        <th style = 'text-align:center;font-size:27px;color:#003366;'colspan='5'>QUANT Sensors</th>
+                        <th style = 'text-align:center;font-size:27px;color:#003366;'colspan='5'>Sensor Reports</th>
                         </tr>
                         <tr class = 'evenrow'>
                         <th>Device Make</th>
@@ -244,50 +245,164 @@ ui <- dashboardPage(
                         
                         </td>
                         </tr>
-                        </table>"   
-                        )
-                        )
-                        
-                    ),
-            tabItem(tabName="input",
-                    h2("Compare your own sampled data"),
-                    box(title = "Upload the file of your data",
-                        p("Data needs to be in an excel sheet."),
-                        p("Excel sheet needs the headings of the columns to be instrument, concentration, date, etc."),
-                        status="info",
-                        solidHeader = TRUE,
-                        width = 12,
-                        fluidRow(
-                            column(
-                                3,
+                        </table>
+                            
                                 
-                               fileInput("add_data", "Add data", accept = ".xlsx")
-                            ),
-                            column(
-                                3,
-                                uiOutput("selected_option"), #choose pollutant type,
-                                
-                            ),
-                            column(
-                                3,
-                                br(),
-                                downloadButton("report", "Generate Report"), #button to download report
-                            )
-                        ),
-                      
-                        br(),
-                    ),
-                    fluidRow(box(
-                        title="Plot",
-                           
-                            plotOutput("inputted_plot"),
+                                <table class = 'report' style = 'width:49%;float:right;' >
+                        <tr class = 'oddrow'>
+                        <th style = 'text-align:center;font-size:27px;color:#003366;'colspan='5'>Cross Company Reports</th>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <th>Pollutant</th>
                         
-                        width=12
+                        <th>Location</th>
                         
-                    ))
-                     
+                        <th>Summary Report </th>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='3' >Particulate Matter (PM2.5)</td>
+                       
+                        <td>London</td>
+                        <td>")),
                     
+                    downloadLink("PM_London", "PM London Report"),
+                    
+                    HTML(paste0("
+                         </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>Manchester</td>
+                        
+                        <td>")),
+                    
+                    downloadLink("PM_Manch", "PM Manchester Report"),
+                    
+                    HTML(paste0(
+                        "</td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>York</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("PM_York", "PM York Report"),
+                    
+                    HTML(paste0(
+                        "</td>
+                        </tr>
+                        
+                        <tr class = 'evenrow'>
+                        <td rowspan='3'>Nitrogen dioxide (NO2)</td>
+                        
+                        <td>London</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("NO2_London", "NO2 London Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>Manchester</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("NO2_Manch", "NO2 Manchester Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>York</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("NO2_York", "NO2 York Report"),
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='3'>Ozone (O3)</td>
+                       
+                        <td>London</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("O3_London", "O3 London Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>Manchester</td>
+                       
+                        <td> ")),
+                    
+                    downloadLink("O3_Manch", "O3 Manchester Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>York</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("O3_York", "O3 York Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                                </table>"   
+                        )
+                        )
+                        
                     ),
+            # tabItem(tabName="input",
+            #         h2("Compare your own sampled data"),
+            #         box(title = "Upload the file of your data",
+            #             p("Data needs to be in an excel sheet."),
+            #             p("Excel sheet needs the headings of the columns to be instrument, concentration, date, etc."),
+            #             status="info",
+            #             solidHeader = TRUE,
+            #             width = 12,
+            #             fluidRow(
+            #                 column(
+            #                     3,
+            #                     
+            #                    fileInput("add_data", "Add data", accept = ".xlsx")
+            #                 ),
+            #                 column(
+            #                     3,
+            #                     uiOutput("selected_option"), #choose pollutant type,
+            #                     
+            #                 ),
+            #                 column(
+            #                     3,
+            #                     br(),
+            #                     downloadButton("report", "Generate Report"), #button to download report
+            #                 )
+            #             ),
+            #           
+            #             br(),
+            #         ),
+            #         fluidRow(box(
+            #             title="Plot",
+            #                
+            #                 plotOutput("inputted_plot"),
+            #             
+            #             width=12
+            #             
+            #         ))
+            #          
+            #         
+            #         ),
             tabItem(tabName="about",
                     h1("Quantification of Utility of Atmospheric Network Technologies: (QUANT)"),
                     p("This dashboard is still under active development and is currently in a beta state. We hope to finalise the app soon.

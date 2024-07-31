@@ -17,9 +17,8 @@ params:
     end: "2022-10-31"
 ---    
 
-```{r logos, echo=FALSE, message=FALSE, warning=FALSE}
- knitr::include_graphics("www/wacl.png")
-```
+
+
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
 
  
@@ -41,6 +40,7 @@ library(zoo)
 library(cowplot)
 library(ggpubr)
 library(patchwork)
+library(dplyr)
 
 
 options(dplyr.summarise.inform=FALSE)
@@ -82,33 +82,47 @@ lcs <- lcs |>
 
 ```
 
+```{r logos, echo=FALSE, message=FALSE, warning=FALSE}
+ knitr::include_graphics("www/wacl.png")
+```
+
 ```{r calibration, echo=FALSE, message=FALSE, warning=FALSE}
 
 cal <- tbl(con, "sensorcalibration") |> collect()
 
 calno <- length(params$cal_version)
 
-if (calno==1) {
-    if (params$cal_version=="out-of-box"){
+if (calno == 1) {
+    if (params$cal_version == "out-of-box") {
         cal1 <- "no calibration was performed (out-of-box)"
         cal2 <- "no second calibration performed (out-of-box)"
-        
-        
     }
     else{
-     cal1 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version, instrument %in% params$device) |> summarize(dateapplied)  |> filter(row_number()==1) 
-   cal1 <- format(cal1$dateapplied, format="%d/%m/%y")  
-    cal2 <- "no second calibration"
+        cal1 <- cal |> filter(
+            measurand == params$pollutant,
+            calibrationname == params$cal_version,
+            instrument %in% params$device
+        ) |> summarize(dateapplied)  |> filter(row_number() == 1)
+        cal1 <- format(cal1$dateapplied, format = "%d/%m/%y")
+        cal2 <- "no second calibration"
     }
-   
+    
     
 } else {
-     cal1 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version[1], instrument %in% params$device) |> summarize(dateapplied)  |> filter(row_number()==1) 
-      cal1 <- format(cal1$dateapplied, format="%d/%m/%y")
-     
-     cal2 <- cal |> filter(measurand==params$pollutant, calibrationname == params$cal_version[2], instrument %in% params$device) |> summarize(dateapplied)  |> filter(row_number()==1) 
-     cal2 <- format(cal2$dateapplied, format="%d/%m/%y")
-    }
+    cal1 <- cal |> filter(
+        measurand == params$pollutant,
+        calibrationname == params$cal_version[1],
+        instrument %in% params$device
+    ) |> summarize(dateapplied)  |> filter(row_number() == 1)
+    cal1 <- format(cal1$dateapplied, format = "%d/%m/%y")
+    
+    cal2 <- cal |> filter(
+        measurand == params$pollutant,
+        calibrationname == params$cal_version[2],
+        instrument %in% params$device
+    ) |> summarize(dateapplied)  |> filter(row_number() == 1)
+    cal2 <- format(cal2$dateapplied, format = "%d/%m/%y")
+}
 ```
 
 \newpage
@@ -155,45 +169,51 @@ The calibration(s) performed by the manufacturers were completed on:
 \newpage
 ```{r function_plot, echo=FALSE, message=FALSE, warning=FALSE}
 
+
 units <- tbl(con, "measurand") |> filter(measurand == params$pollutant) |> select("units") |> collect()
 
 
 #time-series plot
 
-time_series_f <- function(data1, lcsmeas, refmeas,deploy){
- if(nrow(deploy)==1){
+time_series_f <- function(data1, lcsmeas, refmeas, deploy) {
+    if (nrow(deploy) == 1) {
         alpha_size <- 0.8
         
-    }else{
+    } else{
         alpha_size <- 0.3
     }
     
-    time_p <-  plot_time_series(data1, lcs_column="lcsmeas", reference_column="refmeas", time_column="time")  +
-                    guides(colour="legend") +
+    time_p <-  plot_time_series(
+        data1,
+        lcs_column = "lcsmeas",
+        reference_column = "refmeas",
+        time_column = "time"
+    )  +
+        guides(colour = "legend") +
         theme_bw() + scale_x_datetime(date_break = "1 year", date_labels =
-                                          "%Y")  +
+                                          "%Y")+ theme(text=element_text(size=30))  +
         theme(
-            legend.background = element_rect(fill=NA),
+            legend.background = element_rect(fill = NA),
             legend.position = "bottom",
             legend.direction = "vertical",
             legend.title.align = 0.5
         ) + guides(color = guide_legend(ncol = 1))  +
-        xlab("Time") + ylab(paste("Concentration /", units)) + labs(title = "Time-series")   
+        xlab("Time") + ylab(paste("Concentration /", units)) + labs(title = "Time-series")
     
     return(time_p)
 }
 
 # regression plot
 
-regress_f <- function(data1, lcsmeas, refmeas, ref_lcs, deploy){
-    if(nrow(deploy)==1){
+regress_f <- function(data1, lcsmeas, refmeas, ref_lcs, deploy) {
+    if (nrow(deploy) == 1) {
         alpha_size <- 0.8
         
-    }else{
+    } else{
         alpha_size <- 0.3
     }
     
-   model <- lm(lcsmeas ~ refmeas, data = data1)
+    model <- lm(lcsmeas ~ refmeas, data = data1)
     eq <- sprintf("y = %.2fx %s %.1f",
                   coef(model)[2],
                   ifelse(sign(coef(model)[1]) == 1, "+", ""),
@@ -209,28 +229,31 @@ regress_f <- function(data1, lcsmeas, refmeas, ref_lcs, deploy){
     #stats_lab <- sprintf("%s, %s, %s", eq, r2, rmse)
     
     reg_p <- ggplot(data = data1,
-                    mapping = aes(x = refmeas, y = lcsmeas, color = Instrument)) +geom_abline(size=1, colour="gray29", alpha=0.9) + geom_point(alpha = alpha_size, size =
-                                                                                                  0.1)  +  geom_smooth(method = lm, se = FALSE) +
+                    mapping = aes(x = refmeas, y = lcsmeas, color = Instrument)) +
+        geom_abline(size = 1,
+                    colour = "gray29",
+                    alpha = 0.9) + geom_point(alpha = alpha_size, size =
+                                                  0.1)  +  geom_smooth(method = lm, se = FALSE) +
         annotate(
             geom = "text",
             ,
-            x = 0.7 *(max(data1$refmeas)),
+            x = 0.7 * (max(data1$refmeas)),
             y = min(data1$lcsmeas),
             vjust = 0,
             label = stats_lab,
-            size = 3.3,
+            size = 10,
             color = "black"
         )  + theme_bw()  +
         xlab(paste("[Reference] /", units)) + ylab(paste("[LCS] /", units)) + labs(title =
-                                                                                       "Regression") +
+                                                                                       "Regression")+ theme(text=element_text(size=30)) +
         theme(
             legend.position = "bottom",
             legend.direction = "vertical",
             legend.title.align = 0.5
         ) + guides(color = guide_legend(ncol = 2))
     
-
-    return(reg_p)  
+    
+    return(reg_p)
 }
 
 
@@ -293,21 +316,24 @@ drift <- function(stats, refmeas, lcsmeas) {
                     )) + geom_line()  +
         ggplot2::theme_bw() + scale_x_datetime(date_break = "1 year", date_labels =
                                                    "%Y") +
-        xlab("Time") + ylab("Measurements") + labs(title = "Drift") +
+        xlab("Time") + ylab("Measurements") + labs(title = "Drift")+ theme(text=element_text(size=30)) +
         theme(legend.position = "bottom", legend.direction = "vertical")   #+ facet_wrap(~instrument)
 }
 
 ## Ultimate plot function
-plot_f <- function(data, time, lcsmeas, refmeas, ref_lcs, deploy) {
-    
+plot_f <- function(data,
+                   time,
+                   lcsmeas,
+                   refmeas,
+                   ref_lcs,
+                   deploy) {
     time_p <- time_series_f(data, lcsmeas, refmeas, deploy)
     reg_p <- regress_f(data, lcsmeas, refmeas, ref_lcs, deploy)
     drift_p <- drift(data, refmeas, lcsmeas)
     
-    p <- wrap_plots(time_p, reg_p,
-                   drift_p)
-
-       return(p)
+    p <- wrap_plots(time_p, reg_p, drift_p)
+    
+    return(p)
 }
 
 ```
@@ -317,7 +343,7 @@ plot_f <- function(data, time, lcsmeas, refmeas, ref_lcs, deploy) {
 ## Manchester
 
 
-```{r manchester, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="Manchester quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)."}
+```{r manchester, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="Manchester quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)." , fig.height = 14, fig.width = 20}
 
 manch_lcs <- lcs |> filter(location == "Manchester") |> rename(Instrument = instrument) |> collect()
 deploy <- tbl(con, "deployment") |> filter(location == "Manchester", instrument %in% params$device) |> collect()
@@ -333,7 +359,7 @@ plot_f(manch_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
 
 ## London
 
-```{r london, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="London quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)."}
+```{r london, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="London quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)." , fig.height = 14, fig.width = 20}
 london_lcs <- lcs |> filter(location=="London") |> rename(Instrument = instrument) |> collect()
 deploy <- tbl(con, "deployment") |> filter(location == "London", instrument %in% params$device) |> collect()
 
@@ -371,7 +397,7 @@ plot_f(london_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
 # Roadside (York Fishergate)
 
 
-```{r york, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="York quantiative evaluation. Column 1: Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)."}
+```{r york, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="York quantiative evaluation. Column 1: Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)." , fig.height = 14, fig.width = 20}
 york_lcs <- lcs |> filter(location=="York") |> rename(Instrument = instrument) |> collect()
 deploy <- tbl(con, "deployment") |> filter(location == "York", instrument %in% params$device) |> collect()
 
