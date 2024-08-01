@@ -150,14 +150,15 @@ time_series_f <- function(data1, lcsmeas, refmeas,deploy){
     
     time_p <-  plot_time_series(data1, lcs_column="lcsmeas", reference_column="refmeas", time_column="time")  +
                     guides(colour="legend") +
-        theme_bw() + theme(text=element_text(size=30)) + scale_x_datetime(date_break = "1 year", date_labels =
-                                          "%Y")  +
+        theme_bw() + theme(text=element_text(size=30)) + scale_x_datetime(date_labels =
+                                          "%m / %Y")  +
         theme(
             legend.background = element_rect(fill=NA),
             legend.position = "bottom",
             legend.direction = "vertical",
             legend.title.align = 0.5
         ) + guides(color = guide_legend(ncol = 1))  +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5)) +
         xlab("Time") + ylab(paste("Concentration /", units)) + labs(title = "Time-series")   
     
     return(time_p)
@@ -189,8 +190,8 @@ regress_f <- function(data1, lcsmeas, refmeas, ref_lcs, deploy){
     
     
     reg_p <- ggplot(data = data1,
-                    mapping = aes(x = refmeas, y = lcsmeas, color = Instrument)) + geom_abline(size=1, colour="gray29", alpha=0.9) + geom_point(alpha = alpha_size, size =
-                                                                                                  0.1)  +  geom_smooth(method = lm, se = FALSE) +
+                    mapping = aes(x = refmeas, y = lcsmeas, color = Instrument)) + geom_abline(size=1, colour="gray29", alpha=0.9,linetype="dashed") + geom_point(alpha = alpha_size, size =
+                                                                                                  0.1)  +  geom_smooth(method = lm) +
         annotate(
             geom = "text",
             ,
@@ -271,8 +272,11 @@ drift <- function(stats, refmeas, lcsmeas) {
                         color = Measurement,
                         fill = Measurement
                     )) + geom_line()  +
-        ggplot2::theme_bw() + scale_x_datetime(date_break = "1 year", date_labels =
-                                                   "%Y") +
+        ggplot2::theme_bw() + scale_x_datetime(date_labels =
+                                          "%m / %Y") + scale_color_discrete(name="Measurements",
+                         breaks=c("bias", "crmse", "rmse"),
+                         labels=c("Bias", "CRMSE", "RMSE")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))+
         xlab("Time") + ylab("Measurements") + labs(title = "Drift")+ theme(text=element_text(size=30)) +
         theme(legend.position = "bottom", legend.direction = "vertical")   #+ facet_wrap(~instrument)
 }
@@ -297,7 +301,7 @@ plot_f <- function(data, time, lcsmeas, refmeas, ref_lcs, deploy) {
 ## Manchester
 
 
-```{r manchester, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="Manchester quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error).", fig.height = 14, fig.width = 20}
+```{r manchester, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="Manchester quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey dashed line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error).", fig.height = 14, fig.width = 20}
 
 
 manch_lcs <- lcs |> filter(location == "Manchester") |> rename(Instrument = instrument) |> collect() 
@@ -317,7 +321,7 @@ plot_f(manch_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
 
 ## London
 
-```{r london, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="London quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error).", fig.height = 14, fig.width = 20}
+```{r london, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="London quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey dashed line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error).", fig.height = 14, fig.width = 20}
 london_lcs <- lcs |> filter(location=="London") |> rename(Instrument = instrument) |> collect()
 
 instruments_sort <- str_sort(unique(london_lcs$Instrument), numeric=TRUE)
@@ -353,26 +357,6 @@ plot_f(london_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
 
 :::: 
 
-
-\newpage
-
-
-# Roadside (York Fishergate)
-
-```{r york, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="York quantiative evaluation. Column 1: Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error).", fig.height = 14, fig.width = 20}
-york_lcs <- lcs |> filter(location=="York") |> rename(Instrument = instrument) |> collect()
-
-instruments_sort <- str_sort(unique(york_lcs$Instrument), numeric=TRUE)
-york_lcs <- york_lcs %>%
-             mutate(Instrument = factor(Instrument, levels=instruments_sort))
-
-deploy <- tbl(con, "deployment") |> filter(location == "York", instrument %in% params$device) |> collect()
-
-plot_f(york_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
-
-```
-
-\newpage
 # Equations Used
 
 \begin{multicols}{2}
@@ -384,15 +368,17 @@ plot_f(york_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
   halign=center,
   width= 1\linewidth,
   arc=4pt]
+
 \begin{math}
-\text{RMSE}(R, \ L) = \sqrt{\frac{\sum_{i=0}^{n - 1}(R_i - \ L_i)^2}{n}}
+\text{cRMSE(R,\ L) = } \sqrt{\text{mean}(L_i-R_i-\overline{L }+\overline{R})^{2}} 
 \end{math}
 
+
 \begin{itemize}
-\item R = reference measurement. 
-\item L = LCS measurement
-\item n = number of measurements
-\item $\sum$ = sum of
+\item $R_i$ = reference measurement at time i for measurements 1 to n
+\item $L_i$ = LCS (low cost sensor) measurement at time i for measurements 1 to n
+\item $\overline{L}$ = mean LCS measurement
+\item $\overline{R}$ = mean reference measurement
 \end{itemize}
 \end{tcolorbox}
 
@@ -405,19 +391,18 @@ plot_f(york_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
   halign=center,
   width= 1\linewidth,
   arc=4pt]
-
 \begin{math}
-\text{CRMSE(R,\ L) = } \sqrt{\text{mean}(L_i-R_i-\overline{L }+\overline{R})^{2}} 
+\text{RMSE}(R, \ L) = \sqrt{\text{mean}(R_i - \ L_i)^2}
 \end{math}
 
-
 \begin{itemize}
-\item R = reference measurement. 
-\item L = LCS measurement
-\item $\overline{L}$ = mean LCS measurement
-\item $\overline{R}$ = mean reference measurement
+\item $R_i$ = reference measurement at time i for measurements 1 to n
+\item $L_i$ = LCS (low cost sensor) measurement at time i for measurements 1 to n
+\item n = number of measurements
+
 \end{itemize}
 \end{tcolorbox}
+
 
 \end{multicols}
 
@@ -438,3 +423,22 @@ plot_f(york_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
 \item $\overline{R}$ = mean reference measurement
 \end{itemize}
 \end{tcolorbox}
+
+\newpage
+
+
+# Roadside (York Fishergate)
+
+```{r york, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="York quantiative evaluation. Column 1: Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey dashed line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error).", fig.height = 14, fig.width = 20}
+york_lcs <- lcs |> filter(location=="York") |> rename(Instrument = instrument) |> collect()
+
+instruments_sort <- str_sort(unique(york_lcs$Instrument), numeric=TRUE)
+york_lcs <- york_lcs %>%
+             mutate(Instrument = factor(Instrument, levels=instruments_sort))
+
+deploy <- tbl(con, "deployment") |> filter(location == "York", instrument %in% params$device) |> collect()
+
+plot_f(york_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
+
+```
+

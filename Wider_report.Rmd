@@ -8,11 +8,11 @@ output:
     includes:
       in_header: "preamble.tex"
 params:
-    company: "Arisense"
-    device: !r c("Ari063", "Ari078", "Ari086", "Ari093")
-    pollutant: "PM2.5"
-    sensor: !r c("1", "2")
-    cal_version: !r c("cal1")
+    company: ""
+    device: !r c("", "", "")
+    pollutant: ""
+
+    cal_version: !r c("", "")
     start: "2019-12-10"
     end: "2022-10-31"
 ---    
@@ -68,7 +68,7 @@ lcs <- tbl(con, "lcs_hourly") |>
         filter(instrument %in% params$device,
                measurand == params$pollutant,
                version %in% params$cal_version,
-               sensornumber %in% params$sensor,
+               # sensornumber %in% params$sensor,
                between(time, params$start, params$end
                        ),
                is.na(flag) | flag != 'Error', is.na(flag) | flag != 'Warning') %>%
@@ -152,27 +152,11 @@ deploy_f <- function(location_deploy, device){
 
 \pagestyle{fancy}
 
-# Device Information
-
-:::: {.blackbox data-latex=""}
-
-Four devices were deployed:
-
-\begin{itemize}
-
-\item Two were kept in Manchester for the whole study. 
-
-\item One device was in Manchester (`r deploy_f("Manchester",device_f("London"))`) -> London (`r deploy_f("London",device_f("London"))`)-> Manchester (2022-04-29).
-
-\item One device was in Manchester (`r deploy_f("Manchester",device_f("York"))`) -> York (roadside side) (`r deploy_f("York",device_f("York"))`) -> Manchester (2022-04-29).
-\end{itemize}
-
-This report aims to show how well the devices have performed throughout the study and how they were effected by different locations (urban background and roadside).
-:::: 
+## Device Information
 
 :::: {.bluebox data-latex=""}
 
-The calibration(s) performed by the manufacturers were completed on:
+The calibration(s) were completed on:
 
 \begin{itemize}
 
@@ -184,7 +168,7 @@ The calibration(s) performed by the manufacturers were completed on:
 
 :::: 
 
-# Equations Used
+## Equations Used
 
 \begin{multicols}{2}
 
@@ -219,7 +203,7 @@ The calibration(s) performed by the manufacturers were completed on:
   width= 1\linewidth,
   arc=4pt]
 \begin{math}
-\text{RMSE}(R, \ L) = \sqrt{{mean}(R_i - \ L_i)^2}
+\text{RMSE}(R, \ L) = \sqrt{\text{mean}(R_i - \ L_i)^2}
 \end{math}
 
 \begin{itemize}
@@ -427,73 +411,15 @@ plot_f <- function(data,
 
 ```
 
-# Urban Background
 
-## Manchester
-
-
-```{r manchester, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="Manchester quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey dashed line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)." , fig.height = 14, fig.width = 20}
-
-manch_lcs <- lcs |> filter(location == "Manchester") |> rename(Instrument = instrument) |> collect()
-deploy <- tbl(con, "deployment") |> filter(location == "Manchester", instrument %in% params$device) |> collect()
-
-plot_f(manch_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
-
-```
+## Comparison Plots
 
 
+```{r plot, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="Quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey dashed line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)." , fig.height = 14, fig.width = 20}
 
-\newpage
+lcs <- lcs  |> rename(Instrument = instrument) |> collect()
+deploy <- tbl(con, "deployment") |> filter(instrument %in% params$device) |> collect()
 
-
-## London
-
-```{r london, echo=FALSE,message=FALSE, warning=FALSE, fig.cap="London quantiative evaluation. Column 1:  Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey dashed line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)." , fig.height = 14, fig.width = 20}
-london_lcs <- lcs |> filter(location=="London") |> rename(Instrument = instrument) |> collect()
-deploy <- tbl(con, "deployment") |> filter(location == "London", instrument %in% params$device) |> collect()
-
-plot_f(london_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
+plot_f(lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
 
 ```
-
-
-
-:::: {.middlebox data-latex=""}
-\title{Interpreting the data}
-
-\begin{itemize}
-
-\item Time-series - the darker red colour shows the overlap betweeen the lcs measurements and the reference measurements taken.
-
-\item RMSE - the closer the value is to 0, means that the reference values closely matched the tested sensors values.
-
-\item Bias - the difference between average sensor measurements and the average reference measurements
-
-\item CRMSE - similar to the RMSE but with the bias subtracted. This measures error around an average.
-
-\item R-squared (r2) - a value closer to 1 indicates the regression predictions fit more accurately.
-
-\item Drift - a gradual increase shows a larger effect of RMSE, CRMSE or bias that the device possesses.
-
-\end{itemize}
-
-:::: 
-
-
-\newpage
-
-
-# Roadside (York Fishergate)
-
-
-```{r york, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="York quantiative evaluation. Column 1: Time-series plot of the LCS measurements (black line) vs the reference measurements (red line). Column 2: Regression plot against reference data. The grey dashed line represents y=x. Column 3: Measure of drift plot (blue line indicates root mean squared error, the red line represents the mean bias and the green line shows the centered root mean squared error)." , fig.height = 14, fig.width = 20}
-york_lcs <- lcs |> filter(location=="York") |> rename(Instrument = instrument) |> collect()
-deploy <- tbl(con, "deployment") |> filter(location == "York", instrument %in% params$device) |> collect()
-
-plot_f(york_lcs, time, lcsmeas, refmeas, ref_lcs, deploy)
-
-```
-
-
-
-

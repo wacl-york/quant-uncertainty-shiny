@@ -1,0 +1,65 @@
+---
+title: "Bias report"
+output: pdf_document
+
+---
+```{r lib}
+
+library(tidyverse)
+
+```
+
+
+```{r graph}
+x <- seq(0, 8*pi, 0.01)
+y <- sin(x) +2
+z <- sin(x)
+a <- 0
+b <- 2*sin(x)
+c <- 2
+
+plot <- data.frame(x = x, y = y, z = z) |>
+    pivot_longer(-x) |>
+    ggplot(aes(x, value, colour = name)) +
+    geom_line()  +
+    xlab("Time") + ylab(paste("Measurement")) + scale_color_discrete(name="Measurements",
+                         breaks=c("y", "z"),
+                         labels=c("Measured values", "Reference values")) + theme_bw()
+
+plot
+
+plot2 <- data.frame(x = x, y = a, z = z) |>
+    pivot_longer(-x) |>
+    ggplot(aes(x, value, colour = name)) +
+    geom_line() +
+    xlab("Time") + ylab(paste("Measurement"))  + scale_color_discrete(name="Measurements",
+                         breaks=c("y", "z"),
+                         labels=c("Measured values", "Reference values")) + theme_bw()
+
+
+plot2
+
+plot3 <- data.frame(x = x, y = b, z = z) |>
+    pivot_longer(-x) |>
+    ggplot(aes(x, value, colour = name)) +
+    geom_line()  +
+    xlab("Time") + ylab(paste("Measurement"))  + scale_color_discrete(name="Measurements",
+                         breaks=c("y", "z"),
+                         labels=c("Measured values", "Reference values")) + theme_bw()
+
+
+plot3
+
+plot4 <- data.frame(x = x, y = c, z = z) |>
+    pivot_longer(-x) |>
+    ggplot(aes(x, value, colour = name)) +
+    geom_line()  +
+    xlab("Time") + ylab(paste("Measurement"))  + scale_color_discrete(name="Measurements",
+                         breaks=c("y", "z"),
+                         labels=c("Measured values", "Reference values")) + theme_bw()
+
+
+plot4
+
+```
+

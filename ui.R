@@ -60,20 +60,42 @@ ui <- dashboardPage(
                         </ul>
                         <br>
                         <style>
+
+                   .row {
+                   display: flex;
+                    margin-left:-2px;
+                    margin-right:-2px;
+                    
+                    }
+  
+                   .column {
+                  flex: 33%;
+                   padding: 2%;
+                }
+
+
+                 .row::after {
+                 clear: both;
+                 display: table;
+                 }
+                 
                      .report{
                         table {
+                        width:100%;
                         font-family: arial, sans-serif;
                         border-collapse: collapse;
+                        border-spacing: 0;
+                        
                         }
 
                         td, th {
+                        width:33%;
                         border: 1px solid #dddddd;
                         text-align: left;
-                        padding: 8px;
+                         padding: 10px;
                         color:#003366;
                         }
                         
-
                      }
                      
                      .oddrow {
@@ -83,12 +105,15 @@ ui <- dashboardPage(
                      .evenrow {
                       background-color: white;
                      }
+
                         
                         </style>
                         
-                        <table class = 'report' style = 'width:49%;float:left;' >
+                        <div class='row'>
+                        <div class='column'>
+                        <table class = 'report'>
                         <tr class = 'oddrow'>
-                        <th style = 'text-align:center;font-size:27px;color:#003366;'colspan='5'>Sensor Reports</th>
+                        <th style = 'text-align:center;font-size:27px;'colspan='3'>Main Study Reports</th>
                         </tr>
                         <tr class = 'evenrow'>
                         <th>Device Make</th>
@@ -102,12 +127,12 @@ ui <- dashboardPage(
                         <td rowspan='3' ><a href='https://www.aeroqual.com/products/aqm-stations'>AQMesh</a></td>
                        
                         <td>NO2</td>
-                        <td>")),
+                        <td> ")),
                     
                     downloadLink("AQMeshNO2", "AQMesh NO2 Report"),
                     
                     HTML(paste0("
-                         </td>
+                        </td>
                         </tr>
                         <tr class = 'oddrow'>
                         <td>O3</td>
@@ -246,11 +271,277 @@ ui <- dashboardPage(
                         </td>
                         </tr>
                         </table>
-                            
+                     </div>
+                     
+                    <div class='column'>
                                 
-                                <table class = 'report' style = 'width:49%;float:right;' >
+                                <table class = 'report' >
                         <tr class = 'oddrow'>
-                        <th style = 'text-align:center;font-size:27px;color:#003366;'colspan='5'>Cross Company Reports</th>
+                        <th style = 'text-align:center;font-size:27px;'colspan='3'>Wider Participation Reports</th>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <th>Device Make</th>
+                        
+                        <th>Meas.</th>
+                        
+                        <th>Summary Report </th>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='3' >Bosch</td>
+                       
+                        <td>NO2</td>
+                        <td>")),
+                    
+                    downloadLink("NO2_Bosch", "NO2 Bosch Report"),
+                    
+                    HTML(paste0("
+                         </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>O3</td>
+                        
+                        <td>")),
+                    
+                    downloadLink("O3_Bosch", "O3 Bosch Report"),
+                    
+                    HTML(paste0(
+                        "</td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("PM_Bosch", "PM2.5 Bosch Report"),
+                    
+                    HTML(paste0(
+                        "</td>
+                        </tr>
+                        
+                        <tr class = 'evenrow'>
+                        <td rowspan='2'>Clarity</td>
+                        
+                        <td>NO2</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("NO2_Clar", "NO2 Clarity Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("PM_Clar", "PM2.5 Clarity Report"),
+                    
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='3'>EI (Environmental Instruments)</td>
+                       
+                        <td>NO2</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("NO2_EI", "NO2 EI Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>O3</td>
+                       
+                        <td> ")),
+                    
+                    downloadLink("O3_EI", "O3 EI Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("PM_EI", "PM2.5 Clarity Report"),
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'evenrow'>
+                        <td rowspan='3'>Kunak (Kunak Technolgies)</td>
+                       
+                        <td>NO2</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("NO2_Kunak", "NO2 Kunak Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>O3</td>
+                       
+                        <td> ")),
+                    
+                    downloadLink("O3_Kunak", "O3 Kunak Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("PM_Kunak", "PM2.5 Report"),
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='1'>Modal Air</td>
+                       
+                        <td>PM2.5</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("PM_Mod", "PM2.5 Modal Air Report"),
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'evenrow'>
+                        <td rowspan='3'>Oizom</td>
+                       
+                        <td>NO2</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("NO2_Oi", "NO2 Oizom Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>O3</td>
+                       
+                        <td> ")),
+                    
+                    downloadLink("O3_Oi", "O3 Oizom Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("PM_Oi", "PM2.5 Oizom Report"),
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='1'>RLS (Urban Sciences)</td>
+                       
+                        <td>PM2.5</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("PM_RLS", "PM2.5 RLS Report"),
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'evenrow'>
+                        <td rowspan='3'>SCS (South Coast Sciences)</td>
+                       
+                        <td>NO2</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("NO2_SCS", "NO2 SCS Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>O3</td>
+                       
+                        <td> ")),
+                    
+                    downloadLink("O3_SCS", "O3 SCS Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'evenrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("PM_SCS", "PM2.5 SCS Report"),
+                    
+                    HTML(paste0("</td>
+                        </tr>
+                        
+                        <tr class = 'oddrow'>
+                        <td rowspan='3'>Vortex (Vortex IoT)</td>
+                       
+                        <td>NO2</td>
+                       
+                        <td>")),
+                    
+                    downloadLink("NO2_Vor", "NO2 Vortex Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>O3</td>
+                       
+                        <td> ")),
+                    
+                    downloadLink("O3_Vor", "O3 Vortex Report"),
+                    
+                    HTML(paste0("
+                        </td>
+                        </tr>
+                        <tr class = 'oddrow'>
+                        <td>PM2.5</td>
+                        
+                        <td> ")),
+                    
+                    downloadLink("PM_Vor", "PM2.5 Vortex Report"),
+                    
+                    HTML(paste0("
+                        
+                        </td>
+                        </tr>
+                    
+                           </table>
+                            </div>
+                            
+                            <div class='column'>
+                                
+                                <table class = 'report'>
+                        <tr class = 'oddrow'>
+                        <th style = 'text-align:center;font-size:27px;'colspan='3'>Cross Company Reports</th>
                         </tr>
                         <tr class = 'evenrow'>
                         <th>Pollutant</th>
@@ -309,9 +600,9 @@ ui <- dashboardPage(
                         <td>Manchester</td>
                         
                         <td> ")),
-                    
+                    withSpinner(
                     downloadLink("NO2_Manch", "NO2 Manchester Report"),
-                    
+                    ),
                     HTML(paste0("
                         </td>
                         </tr>
@@ -319,9 +610,9 @@ ui <- dashboardPage(
                         <td>York</td>
                         
                         <td> ")),
-                    
+                    withSpinner(
                     downloadLink("NO2_York", "NO2 York Report"),
-                    
+                    ),
                     HTML(paste0("</td>
                         </tr>
                         
@@ -331,9 +622,9 @@ ui <- dashboardPage(
                         <td>London</td>
                        
                         <td>")),
-                    
+                    withSpinner(
                     downloadLink("O3_London", "O3 London Report"),
-                    
+                    ),
                     HTML(paste0("
                         
                         </td>
@@ -342,9 +633,9 @@ ui <- dashboardPage(
                         <td>Manchester</td>
                        
                         <td> ")),
-                    
+                    withSpinner(
                     downloadLink("O3_Manch", "O3 Manchester Report"),
-                    
+                    ),
                     HTML(paste0("
                         </td>
                         </tr>
@@ -352,57 +643,21 @@ ui <- dashboardPage(
                         <td>York</td>
                         
                         <td> ")),
-                    
+                    withSpinner(
                     downloadLink("O3_York", "O3 York Report"),
-                    
+                    ),
                     HTML(paste0("
-                        
                         </td>
                         </tr>
-                                </table>"   
-                        )
-                        )
+                        </table>
+                        </div>
+                        </div>"   
+                    )
+                    ),  
+                        
                         
                     ),
-            # tabItem(tabName="input",
-            #         h2("Compare your own sampled data"),
-            #         box(title = "Upload the file of your data",
-            #             p("Data needs to be in an excel sheet."),
-            #             p("Excel sheet needs the headings of the columns to be instrument, concentration, date, etc."),
-            #             status="info",
-            #             solidHeader = TRUE,
-            #             width = 12,
-            #             fluidRow(
-            #                 column(
-            #                     3,
-            #                     
-            #                    fileInput("add_data", "Add data", accept = ".xlsx")
-            #                 ),
-            #                 column(
-            #                     3,
-            #                     uiOutput("selected_option"), #choose pollutant type,
-            #                     
-            #                 ),
-            #                 column(
-            #                     3,
-            #                     br(),
-            #                     downloadButton("report", "Generate Report"), #button to download report
-            #                 )
-            #             ),
-            #           
-            #             br(),
-            #         ),
-            #         fluidRow(box(
-            #             title="Plot",
-            #                
-            #                 plotOutput("inputted_plot"),
-            #             
-            #             width=12
-            #             
-            #         ))
-            #          
-            #         
-            #         ),
+
             tabItem(tabName="about",
                     h1("Quantification of Utility of Atmospheric Network Technologies: (QUANT)"),
                     p("This dashboard is still under active development and is currently in a beta state. We hope to finalise the app soon.
