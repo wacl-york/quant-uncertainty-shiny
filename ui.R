@@ -600,9 +600,7 @@ ui <- dashboardPage(
                         <td>Manchester</td>
                         
                         <td> ")),
-                    withSpinner(
                     downloadLink("NO2_Manch", "NO2 Manchester Report"),
-                    ),
                     HTML(paste0("
                         </td>
                         </tr>
@@ -610,9 +608,7 @@ ui <- dashboardPage(
                         <td>York</td>
                         
                         <td> ")),
-                    withSpinner(
                     downloadLink("NO2_York", "NO2 York Report"),
-                    ),
                     HTML(paste0("</td>
                         </tr>
                         
@@ -622,9 +618,7 @@ ui <- dashboardPage(
                         <td>London</td>
                        
                         <td>")),
-                    withSpinner(
                     downloadLink("O3_London", "O3 London Report"),
-                    ),
                     HTML(paste0("
                         
                         </td>
@@ -633,9 +627,7 @@ ui <- dashboardPage(
                         <td>Manchester</td>
                        
                         <td> ")),
-                    withSpinner(
                     downloadLink("O3_Manch", "O3 Manchester Report"),
-                    ),
                     HTML(paste0("
                         </td>
                         </tr>
@@ -643,9 +635,7 @@ ui <- dashboardPage(
                         <td>York</td>
                         
                         <td> ")),
-                    withSpinner(
                     downloadLink("O3_York", "O3 York Report"),
-                    ),
                     HTML(paste0("
                         </td>
                         </tr>
