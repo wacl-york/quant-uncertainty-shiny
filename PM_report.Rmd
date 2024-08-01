@@ -104,7 +104,7 @@ Five types of devices measured `r params$pollutant` in `r params$location`:
 
 \item Purple Air -  PA2, PA5, PA9
 
-\item Zephr -  Zep311
+\item Zephyr -  Zep311
 
 \end{itemize}
 
@@ -355,7 +355,7 @@ pa_p <- plot_f(pa_lcs, time, lcsmeas, refmeas, ref_lcs, deploy, pa_name)
 
 
 ```{r Zep, echo=FALSE,message=FALSE, warning=FALSE}
-zep_name <- "Zephr"
+zep_name <- "Zephyr"
 
 zep_lcs <- lcs |> filter(grepl('Zep', instrument)) |> rename(Instrument = instrument) |> collect() 
 

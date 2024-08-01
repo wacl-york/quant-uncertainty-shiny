@@ -103,7 +103,7 @@ Four types of devices measured `r params$pollutant` in `r params$location`:
 
 \item AriSense - Ari086
 
-\item Zephr -  Zep311
+\item Zephyr -  Zep311
 
 \end{itemize}
 
@@ -342,7 +342,7 @@ ari_p <- plot_f(ari_lcs, time, lcsmeas, refmeas, ref_lcs, deploy, ari_name)
 
 
 ```{r Zep, echo=FALSE,message=FALSE, warning=FALSE}
-zep_name <- "Zephr"
+zep_name <- "Zephyr"
 
 zep_lcs <- lcs |> filter(grepl('Zep', instrument), sensornumber %in% c("1", "2")) |> rename(Instrument = instrument) |> collect() 
 

@@ -50,7 +50,7 @@ ui <- dashboardPage(
                      
                     
                     HTML(paste0(
-                        "<p>These reports contain an evaluation of the low-cost-sensor (LCS) units that were monitored as part of the QUANT study. The study performed a long-term evaluation of a subset of commercially available LCS for outdoor air pollution monitoring in background UK urban and roadside environments and focused on key pollutants of interest: nitrogen dioxide (NO2), ozone (O3), and particulate matter (PM). Five types of sensor devices were deployed: AQMesh (AQM), Aeroqual(AQY), Arisense(Ari), Purple Air(PA) and Zephr(Zep). All devices started in Manchester and a representative amount of sensors were moved to either London or York. The two urban background sites were Manchester and London and the roadside site was in York. To ensure impartiality and consistency, device calibrations were performed by the manufacturers without any intervention from our team, and all reference data was embargoed until it was released to all manufacturers simultaneously.</p>
+                        "<p>These reports contain an evaluation of the low-cost-sensor (LCS) units that were monitored as part of the QUANT study. The study performed a long-term evaluation of a subset of commercially available LCS for outdoor air pollution monitoring in background UK urban and roadside environments and focused on key pollutants of interest: nitrogen dioxide (NO2), ozone (O3), and particulate matter (PM). Five types of sensor devices were deployed: AQMesh (AQM), Aeroqual(AQY), Arisense(Ari), Purple Air(PA) and Zephyr(Zep). All devices started in Manchester and a representative amount of sensors were moved to either London or York. The two urban background sites were Manchester and London and the roadside site was in York. To ensure impartiality and consistency, device calibrations were performed by the manufacturers without any intervention from our team, and all reference data was embargoed until it was released to all manufacturers simultaneously.</p>
                         <br>
                         <p>The species under evaluation are whichever are available out of NO2, O3 and PM2.5. These are assessed on their accuracy by comparison to reference data by means of 3 methods:</p>
                         <ul>
@@ -238,13 +238,13 @@ ui <- dashboardPage(
                         </tr>
                         
                         <tr class = 'oddrow'>
-                        <td rowspan='3'><a href='https://www.earthsense.co.uk/zephyr'>Zephr</a></td>
+                        <td rowspan='3'><a href='https://www.earthsense.co.uk/zephyr'>Zephyr</a></td>
                         
                         <td>NO2</td>
                         
                         <td>")),
                     
-                    downloadLink("ZephrNO2", "Zephr NO2 Report"),
+                    downloadLink("ZephyrNO2", "Zephyr NO2 Report"),
                     
                     HTML(paste0("
                         
@@ -255,7 +255,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("ZephrO3", "Zephr O3 Report"),
+                    downloadLink("ZephyrO3", "Zephyr O3 Report"),
                     
                     HTML(paste0("
                         </td>
@@ -265,7 +265,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("ZephrPM2.5", "Zephr PM2.5 Report"),
+                    downloadLink("ZephyrPM2.5", "Zephyr PM2.5 Report"),
                     HTML(paste0("
                         
                         </td>

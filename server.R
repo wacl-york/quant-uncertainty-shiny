@@ -661,34 +661,34 @@ server <- function(session, input, output) {
        }
    )
    
-   output$ZephrNO2 <- downloadHandler(
-       filename = function(){"ZephrNO2.pdf"},
+   output$ZephyrNO2 <- downloadHandler(
+       filename = function(){"ZephyrNO2.pdf"},
        content = function(file) {
            showPageSpinner()
            out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
-                                    params = list(company="Zephr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "NO2", sensor=c("1", "2"), cal_version = "out-of-box")) 
+                                    params = list(company="Zephyr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "NO2", sensor=c("1", "2"), cal_version = "out-of-box")) 
            hidePageSpinner()
            file.rename(out, file)
        }
    )
 
-   output$ZephrO3 <- downloadHandler(
-       filename = function(){"ZephrO3.pdf"},
+   output$ZephyrO3 <- downloadHandler(
+       filename = function(){"ZephyrO3.pdf"},
        content = function(file) {
            showPageSpinner()
            out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
-                                    params = list(company="Zephr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "O3", sensor=c("1", "2"), cal_version = "out-of-box")) 
+                                    params = list(company="Zephyr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "O3", sensor=c("1", "2"), cal_version = "out-of-box")) 
            hidePageSpinner()
            file.rename(out, file)
        }
    )
    
-   output$ZephrPM2.5 <- downloadHandler(
-       filename = function(){"ZephrPM2.5.pdf"},
+   output$ZephyrPM2.5 <- downloadHandler(
+       filename = function(){"ZephyrPM2.5.pdf"},
        content = function(file) {
            showPageSpinner()
            out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
-                                    params = list(company="Zephr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "PM2.5", sensor=c("1", "2"), cal_version = "out-of-box")) 
+                                    params = list(company="Zephyr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "PM2.5", sensor=c("1", "2"), cal_version = "out-of-box")) 
            hidePageSpinner()
            file.rename(out, file)
        }
