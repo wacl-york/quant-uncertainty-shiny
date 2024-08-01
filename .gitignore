@@ -4,5 +4,7 @@
 .Ruserdata
 *.db
 *.json
+*.log
+*.pdf
 
 __pycache__

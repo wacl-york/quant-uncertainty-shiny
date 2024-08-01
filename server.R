@@ -8,6 +8,11 @@ library(tidyverse)
 library(lubridate)
 library(jsonlite)
 library(quantr)
+library(readxl)
+library(tidyverse)
+library(writexl)
+library(httr)
+library(shinycssloaders)
 
 options(dplyr.summarise.inform=FALSE)
 # Somewhat hacky way to tell if running hosted, but still the recommended method
@@ -29,6 +34,7 @@ DEFAULT_START_DATE <- as_date("2019-12-10")
 DEFAULT_END_DATE <- as_date("2020-03-10")
 CREDS <- fromJSON(creds_fn)
 MAX_COMPARISONS <- 4
+DEVICES <- c("AQM388","AQM389", "AQM390", "AQM391")
 
 download_data <- function(con, 
                           in_instrument,
@@ -130,6 +136,7 @@ plot_residuals_fitted <- function(data, lcs_column="lcs", reference_column="refe
         ggplot2::theme(
             panel.grid.minor = ggplot2::element_blank(),
             axis.title.x = ggplot2::element_text(size=10)
+
         ) +
         ggplot2::labs(x="[LCS]", y="Error (reference - lcs)")
 }
@@ -374,8 +381,12 @@ server <- function(session, input, output) {
                 colnames(df)[colnames(df) == 'lcs'] <- lcs_col
                 colnames(df)[colnames(df) == 'ref'] <- ref_col
                 write.csv(df, con, row.names = FALSE, quote = FALSE)
+             # #  rmse = lapply(data, function(df) sqrt(mean((df$ref - df$lcs)**2, na.rm=T)))
+             #    rmse = lapply(df , sqrt(mean((ref_col - lcs_col)**2, na.rm=T)))
+             #    print(rmse)  
             }
-        )
+
+        )           
     }
     ############################ End functions to dynamically create plots
 
@@ -396,14 +407,53 @@ server <- function(session, input, output) {
                 labs(x="", y="") +
                 scale_x_date(date_breaks="4 months",
                              date_labels = "%b %y") +
+                scale_fill_discrete("") +
                 theme(panel.grid.major.x = element_blank(),
                       panel.grid.minor.x = element_blank(),
                       panel.grid.minor.y = element_blank(),
                       legend.text = element_text(size=10),
                       axis.text.x = element_text(size=10),
-                      axis.text.y = element_text(size=9)) +
-                scale_fill_discrete("") +
-                theme(legend.position="bottom")
+                      axis.text.y = element_text(size=9),
+                      legend.position="bottom")
+                
+    })
+    
+    output$selected_device <- renderUI({ #dropdown menu list of pollutant choices
+        selectInput("device", "Device",
+                    choices = DEVICES)
+    })
+    
+    deviceoutputplot <- reactive({
+        df <- tbl(con, "deployment") %>%
+            inner_join(instruments, by="instrument") %>%
+            filter(instrument == input$device) %>%
+            collect() %>%
+            mutate(
+                range = as.integer(difftime(finish, start, units="days")),
+                midpoint = as_date(start) + floor((range)/2)
+            )
+        instruments_descending <- str_sort(unique(df$instrument), numeric=TRUE, decreasing=TRUE)
+        
+        df %>%
+            mutate(instrument = factor(instrument, levels=instruments_descending)) %>%
+            ggplot(aes(x=midpoint, y=instrument, fill=location, width=range)) +
+            geom_tile(na.rm=T) +
+            theme_bw() +
+            labs(x="", y="") +
+            scale_x_date(date_breaks="2 months",
+                         date_labels = "%b %y") +
+            scale_fill_discrete("") +
+            theme(panel.grid.major.x = element_blank(),
+                  panel.grid.minor.x = element_blank(),
+                  panel.grid.minor.y = element_blank(),
+                  legend.text = element_text(size=10),
+                  axis.text.x = element_text(size=10),
+                  axis.text.y = element_text(size=9),
+                  legend.position="bottom")
+    })
+    
+    output$specdevice_deployment_plot <- renderPlot({
+        deviceoutputplot()
     })
     
     output$sensor_availability <- renderUI({
@@ -507,6 +557,505 @@ server <- function(session, input, output) {
     create_update_selection_listeners(1)
     
     ########################### Listeners to add/remove instrument boxes
+
+   
+   
+   # Reports Sensors
+
+   output$AQMeshNO2 <- downloadHandler(
+       filename = function(){"AQMeshNO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="AQMesh", device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "NO2",sensor="1", cal_version ="cal2")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$AQMeshO3 <- downloadHandler(
+       filename = function(){"AQMeshO3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="AQMesh", device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "O3", sensor="1", cal_version = "cal2")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$AQMeshPM2.5 <- downloadHandler(
+       filename = function(){"AQMeshPM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="AQMesh", device = c("AQM388", "AQM389", "AQM390", "AQM391"), pollutant = "PM2.5", sensor="1", cal_version = "cal1")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$AeroqualNO2 <- downloadHandler(
+       filename = function(){"AeroqualNO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Aeroqual", device = c("AQY872", "AQY873", "AQY874", "AQY875"), pollutant = "NO2", sensor=c("1", "2"), cal_version = "cal2")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$AeroqualO3 <- downloadHandler(
+       filename = function(){"AeroqualO3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Aeroqual", device = c("AQY872", "AQY873", "AQY874", "AQY875"), pollutant = "O3", sensor=c("1","2"), cal_version = "cal2")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$AeroqualPM2.5 <- downloadHandler(
+       filename = function(){"AeroqualPM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Aeroqual", device = c("AQY872", "AQY873", "AQY874", "AQY875"), pollutant = "PM2.5", sensor=c("1", "2"), cal_version = "cal2")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$ArisenseNO2 <- downloadHandler(
+       filename = function(){"ArisenseNO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Arisense", device = c("Ari063", "Ari078", "Ari086", "Ari093"), pollutant = "NO2", sensor="1", cal_version = c("cal1", "cal2"))) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$ArisenseO3 <- downloadHandler(
+       filename = function(){"ArisenseO3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Arisense", device = c("Ari063", "Ari078", "Ari086", "Ari093"), pollutant = "O3", sensor="1", cal_version = c("cal1", "cal2"))) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$ArisensePM2.5 <- downloadHandler(
+       filename = function(){"ArisensePM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Arisense", device = c("Ari063", "Ari078", "Ari086", "Ari093"), pollutant = "PM2.5", sensor="1", cal_version = "cal1")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$ZephyrNO2 <- downloadHandler(
+       filename = function(){"ZephyrNO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Zephyr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "NO2", sensor=c("1", "2"), cal_version = "out-of-box")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+
+   output$ZephyrO3 <- downloadHandler(
+       filename = function(){"ZephyrO3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Zephyr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "O3", sensor=c("1", "2"), cal_version = "out-of-box")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$ZephyrPM2.5 <- downloadHandler(
+       filename = function(){"ZephyrPM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("sensor_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Zephyr", device = c("Zep188", "Zep309", "Zep311", "Zep344"), pollutant = "PM2.5", sensor=c("1", "2"), cal_version = "out-of-box")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PurpleAir <- downloadHandler(
+       filename = function(){"PurpleAirPM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("purple_air_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="PurpleAir", device = c("PA2", "PA3", "PA4", "PA5", "PA6", "PA7", "PA8", "PA9", "PA10"), pollutant = "PM2.5", sensor="1", cal_version = "indoor")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   # Cross Company Reports
+   ##PM2.5
+   
+   output$PM_London <- downloadHandler(
+       filename = function(){"PM_London_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("PM_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="London", device = c("AQM389", "AQY874", "Ari086", "Zep311", "PA2", "PA5", "PA9"), pollutant = "PM2.5")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_Manch <- downloadHandler(
+       filename = function(){"PM_Manchester_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("PM_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="Manchester", device = c("AQM388", "AQM389", "AQM390", "AQM391", "AQY872", "AQY873","AQY874", "AQY875","Ari063","Ari078","Ari086", "Ari093","Zep188", "Zep309", "Zep311", "Zep344", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7","PA8", "PA9", "PA10"), pollutant = "PM2.5")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_York <- downloadHandler(
+       filename = function(){"PM_York_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("PM_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="York", device = c("AQM391", "AQY875", "Ari093", "Zep309", "PA7","PA8", "PA10"), pollutant = "PM2.5")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   ##NO2
+   
+   output$NO2_London <- downloadHandler(
+       filename = function(){"NO2_London_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("NO2_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="London", device = c("AQM389", "AQY874", "Ari086", "Zep311", "PA2", "PA5", "PA9"), pollutant = "NO2")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_Manch <- downloadHandler(
+       filename = function(){"NO2_Manchester_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("NO2_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="Manchester", device = c("AQM388", "AQM389", "AQM390", "AQM391", "AQY872", "AQY873","AQY874", "AQY875","Ari063","Ari078","Ari086", "Ari093","Zep188", "Zep309", "Zep311", "Zep344", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7","PA8", "PA9", "PA10"), pollutant = "NO2")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_York <- downloadHandler(
+       filename = function(){"NO2_York_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("NO2_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="York", device = c("AQM391", "AQY875", "Ari093", "Zep309", "PA7","PA8", "PA10"), pollutant = "NO2")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   ##O3
+   
+   output$O3_London <- downloadHandler(
+       filename = function(){"O3_London_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("O3_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="London", device = c("AQM389", "AQY874", "Ari086", "Zep311", "PA2", "PA5", "PA9"), pollutant = "O3")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_Manch <- downloadHandler(
+       filename = function(){"O3_Manchester_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("O3_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="Manchester", device = c("AQM388", "AQM389", "AQM390", "AQM391", "AQY872", "AQY873","AQY874", "AQY875","Ari063","Ari078","Ari086", "Ari093","Zep188", "Zep309", "Zep311", "Zep344", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7","PA8", "PA9", "PA10"), pollutant = "O3")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_York <- downloadHandler(
+       filename = function(){"O3_York_Report.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("O3_report.Rmd", output_format = "pdf_document",
+                                    params = list(location="York", device = c("AQM391", "AQY875", "Ari093", "Zep309", "PA7","PA8", "PA10"), pollutant = "O3")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   ## Wider Participation 
+   
+   output$NO2_Bosch <- downloadHandler(
+       filename = function(){"Bosch NO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Bosch", device = c("IMB1", "IMB2"), pollutant = "PM2.5", cal_version="cal1")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_Bosch <- downloadHandler(
+       filename = function(){"Bosch O3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Bosch", device = c("IMB1", "IMB2"), pollutant = "O3", cal_version="cal1")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_Bosch <- downloadHandler(
+       filename = function(){"Bosch PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Bosch", device = c("IMB1", "IMB2"), pollutant = "PM2.5", cal_version="cal1")) 
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_Clar <- downloadHandler(
+       filename = function(){"Clarity NO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Clarity", device = c("NS1", "NS2", "NS3"), pollutant = "NO2", cal_version=c("cal1", "cal2")))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_Clar <- downloadHandler(
+       filename = function(){"Clarity PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Clarity", device = c("NS1", "NS2", "NS3"), pollutant = "PM2.5", cal_version=c("cal1", "cal2")))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_EI <- downloadHandler(
+       filename = function(){"EI NO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="EI (Environmental Instruments)", device = c("AQM1", "AQM2", "AQM3"), pollutant = "NO2", cal_version=c("cal1", "cal2")))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_EI <- downloadHandler(
+       filename = function(){"EI O3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="EI (Environmental Instruments)", device = c("AQM1", "AQM2", "AQM3"), pollutant = "O3", cal_version=c("cal1", "cal2")))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_EI <- downloadHandler(
+       filename = function(){"EI PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="EI (Environmental Instruments)", device = c("AQM1", "AQM2", "AQM3"), pollutant = "PM2.5", cal_version=c("cal1", "cal2")))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_Kunak <- downloadHandler(
+       filename = function(){"Kunak NO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Kunak", device = c("AP1", "AP2", "AP3"), pollutant = "NO2", cal_version=c("cal1", "cal2")))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_Kunak <- downloadHandler(
+       filename = function(){"Kunak O3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Kunak", device = c("AP1", "AP2", "AP3"), pollutant = "O3", cal_version=c("cal1", "cal2")))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_Kunak <- downloadHandler(
+       filename = function(){"Kunak PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Kunak", device = c("AP1", "AP2", "AP3"), pollutant = "PM2.5", cal_version=c("cal1", "cal2")))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_Mod <- downloadHandler(
+       filename = function(){"Modal Air PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Modal Air", device = c("AP1", "AP2", "AP3"), pollutant = "PM2.5", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_Oi <- downloadHandler(
+       filename = function(){"Oizom NO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Oizom", device = c("Poll1", "Poll2"), pollutant = "NO2", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_Oi <- downloadHandler(
+       filename = function(){"Oizom O3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Oizom", device = c("Poll1", "Poll2"), pollutant = "O3", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_Oi <- downloadHandler(
+       filename = function(){"Oizom PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Oizom", device = c("Poll1", "Poll2"), pollutant = "PM2.5", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_RLS <- downloadHandler(
+       filename = function(){"RLS PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="RLS", device = c("Atm1", "Atm2"), pollutant = "PM2.5", cal_version="out-of-box"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_SCS <- downloadHandler(
+       filename = function(){"SCS NO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="SCS (South Coast Science)", device = c("Prax1", "Prax2"), pollutant = "NO2", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_SCS <- downloadHandler(
+       filename = function(){"SCS O3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="SCS (South Coast Science)", device = c("Prax1", "Prax2"), pollutant = "O3", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_SCS <- downloadHandler(
+       filename = function(){"SCS PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="SCS (South Coast Science)", device = c("Prax1", "Prax2"), pollutant = "PM2.5", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$NO2_Vor <- downloadHandler(
+       filename = function(){"Vortex NO2.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Vortex (Vortex IoT)", device = c("SA1", "SA2", "SA3"), pollutant = "NO2", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$O3_Vor <- downloadHandler(
+       filename = function(){"Vortex O3.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Vortex (Vortex IoT)", device = c("SA1", "SA2", "SA3"), pollutant = "O3", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   
+   output$PM_Vor <- downloadHandler(
+       filename = function(){"Vortex PM2.5.pdf"},
+       content = function(file) {
+           showPageSpinner()
+           out <- rmarkdown::render("Wider_report.Rmd", output_format = "pdf_document",
+                                    params = list(company="Vortex (Vortex IoT)", device = c("SA1", "SA2", "SA3"), pollutant = "PM2.5", cal_version="cal1"))
+           hidePageSpinner()
+           file.rename(out, file)
+       }
+   )
+   #############################
+         
     observeEvent(input$add_comparison, {
         N_COMPARISONS <<- N_COMPARISONS + 1
         # Insert UI and create plot renderers and button listeners
@@ -649,13 +1198,13 @@ server <- function(session, input, output) {
     # Redownload data when measurand / or time resolution changes
     observeEvent(
         {
-            input$measurand
+            input$measurand   #detects changes to measurand(pollutants) or time res
             input$timeavg
         },
         {
-            for (i in seq(N_COMPARISONS)) {
+            for (i in seq(N_COMPARISONS)) {  #loops for all plots the user wants
                 dates <- input[[sprintf("date_%d", i)]]
-                dfs[[sprintf("df_%d", i)]] <- download_data(
+                dfs[[sprintf("df_%d", i)]] <- download_data(   #re-downloads data and resets the graph with different choice of pollutant/time res
                     con,
                     input[[sprintf("instrument_select_%d", i)]],
                     input$measurand,

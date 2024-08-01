@@ -1,0 +1,42 @@
+\usepackage{tcolorbox}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+\usepackage{multicol}
+
+\definecolor{blueberry}{rgb}{0.38, 0.612, 1}
+\definecolor{reddy}{rgb}{0.973, 0.463, 0.427}
+\definecolor{grun}{rgb}{0, 0.729, 0.22}
+
+\newtcolorbox{blackbox}{
+  colback=white,
+  colframe=blueberry,
+  coltext=black,
+  boxsep=5pt,
+  toprule=3mm,
+  arc=4pt}
+  
+  \newtcolorbox{bluebox}{
+  colback=white,
+  colframe=blueberry,
+  coltext=black,
+  boxsep=5pt,
+  arc=4pt}
+  
+\newtcolorbox{middlebox}{
+  colback=white,
+  colframe=reddy,
+  coltext=black,
+  boxsep=5pt,
+  leftrule=3mm,
+  arc=4pt}
+  
+  \newtcolorbox{bottombox}{
+  colback=white,
+  colframe=grun,
+  coltext=black,
+  boxsep=5pt,
+  bottomrule=3mm,
+  halign=center,
+  width= 1\linewidth,
+  arc=4pt}
