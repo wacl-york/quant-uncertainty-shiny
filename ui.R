@@ -129,7 +129,7 @@ ui <- dashboardPage(
                         <td>NO2</td>
                         <td> ")),
                     
-                    downloadLink("AQMeshNO2", "AQMesh NO2 Report"),
+                    a(href="reports/AQMeshNO2.pdf", "AQMesh NO2 Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -139,7 +139,7 @@ ui <- dashboardPage(
                         
                         <td>")),
                         
-                        downloadLink("AQMeshO3", "AQMesh O3 Report"),
+                        a(href="reports/AQMeshO3.pdf", "AQMesh O3 Report", download=NA, target="_blank"),
                         
                         HTML(paste0(
                          "</td>
@@ -149,7 +149,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("AQMeshPM2.5", "AQMesh PM2.5 Report"),
+                    a(href="reports/AQMeshPM2.5.pdf", "AQMesh PM2.5 Report", download=NA, target="_blank"),
                     
                     HTML(paste0(
                         "</td>
@@ -162,7 +162,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("AeroqualNO2", "Aeroqual NO2 Report"),
+                    a(href="reports/AeroqualNO2.pdf", "Aeroqual NO2 Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -173,7 +173,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("AeroqualO3", "Aeroqual O3 Report"),
+                    a(href="reports/AeroqualO3.pdf", "Aeroqual O3 Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -183,7 +183,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("AeroqualPM2.5", "Aeroqual PM2.5 Report"),
+                    a(href="reports/AeroqualPM2.5.pdf", "Aeroqual PM2.5 Report", download=NA, target="_blank"),
                     
                     HTML(paste0("</td>
                         </tr>
@@ -195,7 +195,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("ArisenseNO2", "Arisense NO2 Report"),
+                    a(href="reports/ArisenseNO2.pdf", "Arisense NO2 Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -206,7 +206,7 @@ ui <- dashboardPage(
                        
                         <td> ")),
                     
-                    downloadLink("ArisenseO3", "Arisense O3 Report"),
+                    a(href="reports/ArisenseO3.pdf", "Arisense O3 Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -216,7 +216,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("ArisensePM2.5", "Arisense PM2.5 Report"),
+                    a(href="reports/ArisensePM2.5.pdf", "Arisense PM2.5 Report", download=NA, target="_blank"),
                         
                     HTML(paste0("
                         
@@ -230,7 +230,7 @@ ui <- dashboardPage(
                         
                         <td>")),
                     
-                    downloadLink("PurpleAir", "Purple Air Report"),
+                    a(href="reports/PurpleAirPM2.5.pdf", "Purple Air Report", download=NA, target="_blank"),
                         
                     HTML(paste0("
                         
@@ -244,7 +244,7 @@ ui <- dashboardPage(
                         
                         <td>")),
                     
-                    downloadLink("ZephyrNO2", "Zephyr NO2 Report"),
+                    a(href="reports/ZephyrNO2.pdf", "Zephyr NO2 Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -255,7 +255,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("ZephyrO3", "Zephyr O3 Report"),
+                    a(href="reports/ZephyrO3.pdf", "Zephyr O3 Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -265,7 +265,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("ZephyrPM2.5", "Zephyr PM2.5 Report"),
+                    a(href="reports/ZephyrPM2.5.pdf", "Zephyr PM2.5 Report", download=NA, target="_blank"),
                     HTML(paste0("
                         
                         </td>
@@ -293,7 +293,7 @@ ui <- dashboardPage(
                         <td>NO2</td>
                         <td>")),
                     
-                    downloadLink("NO2_Bosch", "NO2 Bosch Report"),
+                    a(href="reports/BoschNO2.pdf", "NO2 Bosch Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                          </td>
@@ -303,7 +303,7 @@ ui <- dashboardPage(
                         
                         <td>")),
                     
-                    downloadLink("O3_Bosch", "O3 Bosch Report"),
+                    a(href="reports/BoschO3.pdf", "O3 Bosch Report", download=NA, target="_blank"),
                     
                     HTML(paste0(
                         "</td>
@@ -313,7 +313,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("PM_Bosch", "PM2.5 Bosch Report"),
+                    a(href="reports/BoschPM2.5.pdf", "PM2.5 Bosch Report", download=NA, target="_blank"),
                     
                     HTML(paste0(
                         "</td>
@@ -326,7 +326,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("NO2_Clar", "NO2 Clarity Report"),
+                    a(href="reports/ClarityNO2.pdf", "NO2 Clarity Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -337,7 +337,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("PM_Clar", "PM2.5 Clarity Report"),
+                    a(href="reports/ClarityPM2.5.pdf", "PM2.5 Clarity Report", download=NA, target="_blank"),
                     
                     
                     HTML(paste0("</td>
@@ -350,7 +350,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("NO2_EI", "NO2 EI Report"),
+                    a(href="reports/EINO2.pdf", "NO2 EI Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -361,7 +361,7 @@ ui <- dashboardPage(
                        
                         <td> ")),
                     
-                    downloadLink("O3_EI", "O3 EI Report"),
+                    a(href="reports/EIO3.pdf", "O3 EI Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -371,7 +371,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("PM_EI", "PM2.5 Clarity Report"),
+                    a(href="reports/EIPM2.5.pdf", "PM2.5 EI Report", download=NA, target="_blank"),
                     
                     HTML(paste0("</td>
                         </tr>
@@ -383,7 +383,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("NO2_Kunak", "NO2 Kunak Report"),
+                    a(href="reports/KunakNO2.pdf", "NO2 Kunak Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -394,7 +394,7 @@ ui <- dashboardPage(
                        
                         <td> ")),
                     
-                    downloadLink("O3_Kunak", "O3 Kunak Report"),
+                    a(href="reports/KunakO3.pdf", "O3 Kunak Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -404,19 +404,19 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("PM_Kunak", "PM2.5 Report"),
+                    a(href="reports/KunakPM2.5.pdf", "PM2.5 Kunak Report", download=NA, target="_blank"),
                     
                     HTML(paste0("</td>
                         </tr>
                         
                         <tr class = 'oddrow'>
-                        <td rowspan='1'>Modal Air</td>
+                        <td rowspan='1'>Model Air</td>
                        
                         <td>PM2.5</td>
                        
                         <td>")),
                     
-                    downloadLink("PM_Mod", "PM2.5 Modal Air Report"),
+                    a(href="reports/ModelAirPM2.5.pdf", "PM2.5 Model Air Report", download=NA, target="_blank"),
                     
                     HTML(paste0("</td>
                         </tr>
@@ -428,7 +428,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("NO2_Oi", "NO2 Oizom Report"),
+                    a(href="reports/OizomNO2.pdf", "NO2 Oizom Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -439,7 +439,7 @@ ui <- dashboardPage(
                        
                         <td> ")),
                     
-                    downloadLink("O3_Oi", "O3 Oizom Report"),
+                    a(href="reports/OizomO3.pdf", "O3 Oizom Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -449,7 +449,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("PM_Oi", "PM2.5 Oizom Report"),
+                    a(href="reports/OizomPM2.5.pdf", "PM2.5 Oizom Report", download=NA, target="_blank"),
                     
                     HTML(paste0("</td>
                         </tr>
@@ -461,7 +461,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("PM_RLS", "PM2.5 RLS Report"),
+                    a(href="reports/RLSPM2.5.pdf", "PM2.5 RLS Report", download=NA, target="_blank"),
                     
                     HTML(paste0("</td>
                         </tr>
@@ -473,7 +473,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("NO2_SCS", "NO2 SCS Report"),
+                    a(href="reports/SCSNO2.pdf", "NO2 SCS Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -484,7 +484,7 @@ ui <- dashboardPage(
                        
                         <td> ")),
                     
-                    downloadLink("O3_SCS", "O3 SCS Report"),
+                    a(href="reports/SCSO3.pdf", "O3 SCS Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -494,7 +494,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("PM_SCS", "PM2.5 SCS Report"),
+                    a(href="reports/SCSPM2.5.pdf", "PM2.5 SCS Report", download=NA, target="_blank"),
                     
                     HTML(paste0("</td>
                         </tr>
@@ -506,7 +506,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("NO2_Vor", "NO2 Vortex Report"),
+                    a(href="reports/VortexNO2.pdf", "NO2 Vortex Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -517,7 +517,7 @@ ui <- dashboardPage(
                        
                         <td> ")),
                     
-                    downloadLink("O3_Vor", "O3 Vortex Report"),
+                    a(href="reports/VortexO3.pdf", "O3 Vortex Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         </td>
@@ -527,7 +527,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("PM_Vor", "PM2.5 Vortex Report"),
+                    a(href="reports/VortexPM2.5.pdf", "PM2.5 Vortex Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -557,7 +557,7 @@ ui <- dashboardPage(
                         <td>London</td>
                         <td>")),
                     
-                    downloadLink("PM_London", "PM London Report"),
+                    a(href="reports/PM_London_Report.pdf", "PM London Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                          </td>
@@ -567,7 +567,7 @@ ui <- dashboardPage(
                         
                         <td>")),
                     
-                    downloadLink("PM_Manch", "PM Manchester Report"),
+                    a(href="reports/PM_Manchester_Report.pdf", "PM Manchester Report", download=NA, target="_blank"),
                     
                     HTML(paste0(
                         "</td>
@@ -577,7 +577,7 @@ ui <- dashboardPage(
                         
                         <td> ")),
                     
-                    downloadLink("PM_York", "PM York Report"),
+                    a(href="reports/PM_York_Report.pdf", "PM York Report", download=NA, target="_blank"),
                     
                     HTML(paste0(
                         "</td>
@@ -590,7 +590,7 @@ ui <- dashboardPage(
                        
                         <td>")),
                     
-                    downloadLink("NO2_London", "NO2 London Report"),
+                    a(href="reports/NO2_London_Report.pdf", "NO2 London Report", download=NA, target="_blank"),
                     
                     HTML(paste0("
                         
@@ -600,7 +600,7 @@ ui <- dashboardPage(
                         <td>Manchester</td>
                         
                         <td> ")),
-                    downloadLink("NO2_Manch", "NO2 Manchester Report"),
+                    a(href="reports/NO2_Manchester_Report.pdf", "NO2 Manchester Report", download=NA, target="_blank"),
                     HTML(paste0("
                         </td>
                         </tr>
@@ -608,7 +608,7 @@ ui <- dashboardPage(
                         <td>York</td>
                         
                         <td> ")),
-                    downloadLink("NO2_York", "NO2 York Report"),
+                    a(href="reports/NO2_York_Report.pdf", "NO2 York Report", download=NA, target="_blank"),
                     HTML(paste0("</td>
                         </tr>
                         
@@ -618,7 +618,7 @@ ui <- dashboardPage(
                         <td>London</td>
                        
                         <td>")),
-                    downloadLink("O3_London", "O3 London Report"),
+                    a(href="reports/O3_London_Report.pdf", "O3 London Report", download=NA, target="_blank"),
                     HTML(paste0("
                         
                         </td>
@@ -627,7 +627,7 @@ ui <- dashboardPage(
                         <td>Manchester</td>
                        
                         <td> ")),
-                    downloadLink("O3_Manch", "O3 Manchester Report"),
+                    a(href="reports/O3_Manchester_Report.pdf", "O3 Manchester Report", download=NA, target="_blank"),
                     HTML(paste0("
                         </td>
                         </tr>
@@ -635,7 +635,7 @@ ui <- dashboardPage(
                         <td>York</td>
                         
                         <td> ")),
-                    downloadLink("O3_York", "O3 York Report"),
+                    a(href="reports/O3_York_Report.pdf", "O3 York Report", download=NA, target="_blank"),
                     HTML(paste0("
                         </td>
                         </tr>
