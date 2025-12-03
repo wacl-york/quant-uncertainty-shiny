@@ -1,6 +1,6 @@
 
 ---
-title: " Nitrogen Dioxide (`r params$pollutant`) in `r params$location`" 
+title: " Ozone (`r params$pollutant`) in `r params$location`" 
 toc: true
 theme: united
 output: 
@@ -278,7 +278,7 @@ drift <- function(stats, refmeas, lcsmeas) {
                         fill = Measurement
                     )) + geom_line()  +
         ggplot2::theme_bw() + scale_x_datetime(date_labels =
-                                          "%m / %Y" +
+                                          "%m / %Y") +
         xlab("Time") + ylab("Measurements") + theme(text=element_text(size=25)) + #labs(title = "Drift") +
         #  theme(legend.position="none")
         theme(legend.position = "bottom", legend.direction = "vertical")   #+ facet_wrap(~instrument)
