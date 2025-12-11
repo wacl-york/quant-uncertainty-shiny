@@ -1,7 +1,7 @@
 library(DBI)
 library(knitr)
 library(kableExtra)
-library(RPostgres)
+library(duckdb)
 library(shiny)
 library(shinyjs)
 library(tidyverse)
@@ -13,15 +13,6 @@ library(httr)
 library(shinycssloaders)
 
 options(dplyr.summarise.inform=FALSE)
-# Somewhat hacky way to tell if running hosted, but still the recommended method
-# https://stackoverflow.com/questions/31423144/how-to-know-if-the-app-is-running-at-local-or-on-server-r-shiny
-is_local <- Sys.getenv('SHINY_PORT') == ""
-
-if (is_local) {
-    creds_fn <- 'creds.json'
-} else {
-    creds_fn <- "/mnt/shiny/quant_us/creds.json"
-}
 
 MEASURANDS <- c("NO2", "O3", "PM2.5")
 MET_FIELDS <- c('Temperature', 'RelHumidity')
@@ -30,7 +21,6 @@ STUDY_START <- as_date("2019-12-10")
 STUDY_END <- as_date("2022-10-31")
 DEFAULT_START_DATE <- as_date("2019-12-10")
 DEFAULT_END_DATE <- as_date("2020-03-10")
-CREDS <- fromJSON(creds_fn)
 MAX_COMPARISONS <- 4
 DEVICES <- c("AQM388","AQM389", "AQM390", "AQM391")
 
@@ -44,7 +34,7 @@ download_data <- function(con,
                           in_cal,
                           met_variables,
                           time_variables) {
-    lcs <- tbl(con, "lcs_hourly") %>%
+    lcs <- tbl(con, "read_parquet('db/lcs_hourly/*/*/*/*/*.parquet', hive_partitioning=true)") %>%
         filter(instrument == in_instrument,
                measurand == in_pollutant,
                between(time, in_start, in_end),
@@ -54,13 +44,15 @@ download_data <- function(con,
         rename(lcs=measurement)
     # Obtain corresponding reference
     lcs <- lcs %>%
-            inner_join(tbl(con, "ref_hourly") %>% select(-version) %>% rename(ref=measurement), 
-                       by=c("location", "time", "measurand"))
+            inner_join(
+                tbl(con, "read_parquet('db/ref_hourly/*/*/*/*.parquet', hive_partitioning=true)") %>% select(-version) |> rename(ref=measurement),
+                by=c("location", "time", "measurand")
+            )
     # Also download selected met variables
     # Create a dataframe containing all possible combinations of met factors, time, 
     # and location, then inner join this on what's available in the database
     time_locations <- lcs %>% distinct(time, location) %>% collect()
-    ref_met <- tbl(con, "ref_hourly") %>%
+    ref_met <- tbl(con, "read_parquet('db/ref_hourly/*/*/*/*.parquet', hive_partitioning=true)") |>
         filter(
             time %in% local(unique(time_locations$time)),
             location %in% local(unique(time_locations$location)),
@@ -179,13 +171,8 @@ plot_residuals_met <- function(data, lcs_column="lcs", reference_column="referen
 
 server <- function(session, input, output) {
     
-    con <- dbConnect(Postgres(),
-                     dbname=CREDS$db,
-                     host=CREDS$host,
-                     port=CREDS$port,
-                     user=CREDS$username,
-                     password=CREDS$password)
-    instruments <- tbl(con, "lcsinstrument") %>% 
+    con <- dbConnect(duckdb(), read_only=TRUE)
+    instruments <- tbl(con, "read_parquet('db/lcsinstrument/*.parquet', hive_partitioning=true)") %>%
                     filter(study == "QUANT")
     instrument_names <- instruments %>% select(instrument) %>% collect() %>% pull(instrument)
     instrument_names <- str_sort(instrument_names, numeric=TRUE)
@@ -334,13 +321,13 @@ server <- function(session, input, output) {
         observeEvent(input[[sprintf("instrument_select_%d", i)]], {
             # Find sensornumbers and calibrationnames for this instrument
             inst <- input[[sprintf("instrument_select_%d", i)]]
-            sensors <- tbl(con, "sensor") %>%
+            sensors <- tbl(con, "read_parquet('db/sensor/*.parquet', hive_partitioning=true)") %>%
                 filter(instrument == inst,
                        measurand == local(input$measurand)) %>%
                 distinct(sensornumber) %>%
                 collect() %>%
                 pull(sensornumber)
-            cals <- tbl(con, "sensorcalibration") %>%
+            cals <- tbl(con, "read_parquet('db/sensorcalibration/*.parquet', hive_partitioning=true)") %>%
                 filter(instrument == inst,
                        measurand == local(input$measurand),
                        calibrationname != 'Rescraped') %>%
@@ -389,7 +376,7 @@ server <- function(session, input, output) {
     ############################ End functions to dynamically create plots
 
     output$deployment_plot <- renderPlot({
-        df <- tbl(con, "deployment") %>%
+        df <- tbl(con, "read_parquet('db/deployment/*.parquet', hive_partitioning=true)") %>%
                         inner_join(instruments, by="instrument") %>%
             collect() %>%
             mutate(
@@ -422,7 +409,7 @@ server <- function(session, input, output) {
     })
     
     deviceoutputplot <- reactive({
-        df <- tbl(con, "deployment") %>%
+        df <- tbl(con, "read_parquet('db/deployment/*.parquet', hive_partitioning=true)") %>%
             inner_join(instruments, by="instrument") %>%
             filter(instrument == input$device) %>%
             collect() %>%
@@ -456,7 +443,7 @@ server <- function(session, input, output) {
     
     output$sensor_availability <- renderUI({
         # Obtain which sensors are housed in which instruments
-        df <- tbl(con, "sensor") %>%
+        df <- tbl(con, "read_parquet('db/sensor/*.parquet', hive_partitioning=true)") %>%
                 inner_join(instruments, by="instrument") %>%
                 filter(measurand %in% MEASURANDS) %>%
                 select(instrument, measurand, sensornumber) %>%
@@ -493,13 +480,13 @@ server <- function(session, input, output) {
     })
     
     output$cal_versions <- renderPlot({
-        df <- tbl(con, "sensorcalibration") %>%
+        df <- tbl(con, "read_parquet('db/sensorcalibration/*.parquet', hive_partitioning=true)") %>%
             inner_join(instruments, by="instrument") %>%
             filter(calibrationname != 'Rescraped',
-                   measurand %in% MEASURANDS) %>%
+                   measurand %in% MEASURANDS) |>
+            collect() |>
             group_by(company, measurand, calibrationname) %>%
             summarise(dateapplied = min(as_date(dateapplied), na.rm=T)) %>%
-            collect() %>%
             ungroup() %>%
             arrange(company, dateapplied)
         
